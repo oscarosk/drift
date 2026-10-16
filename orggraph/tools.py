@@ -1,0 +1,340 @@
+"""
+Drift's tool catalogue. The agent never writes Cypher: it picks one of these tools and fills in
+arguments. Every argument that names something (a directory, a person, a decision) is resolved
+against the graph BEFORE any traversal runs, so the model can't reason about things that
+don't exist, and no model text is ever pasted into a query.
+
+Every tool returns an Answer with one of four outcomes:
+  answered_with_path    the graph held the relationships; the hops are included
+  answered_from_memory  a previous session established this (see memory.py)
+  not_in_graph          the thing exists, but nothing connects it the way the question assumed
+  unknown_entity        the name isn't in the graph, so no query ran (suggestions included)
+"""
+from __future__ import annotations
+
+import datetime as dt
+import difflib
+import posixpath
+import time
+from dataclasses import dataclass, field
+
+from orggraph.db import graph
+
+ACT = "AUTHORED_PR|REVIEWED|LGTM|APPROVED_PR"
+TIMEOUT_MS = 30000
+
+
+@dataclass
+class Answer:
+    outcome: str
+    tool: str
+    args: dict
+    data: dict = field(default_factory=dict)
+    paths: list = field(default_factory=list)       # each path: list of node labels, in order
+    trace: list = field(default_factory=list)       # one entry per query: name, ms, rows
+    note: str = ""                                  # resolution notes, caveats
+
+    def to_dict(self):
+        return self.__dict__
+
+
+class Tools:
+    def __init__(self, graph_name: str | None = None):
+        self.g = graph(graph_name) if graph_name else graph()
+        self._trace: list = []
+        self._as_of = None
+
+    # ---- plumbing ---------------------------------------------------------------------
+    def q(self, name: str, cypher: str, params: dict | None = None):
+        t = time.perf_counter()
+        rows = self.g.ro_query(cypher, params or {}, timeout=TIMEOUT_MS).result_set
+        self._trace.append({"query": name, "ms": round((time.perf_counter() - t) * 1000, 1), "rows": len(rows)})
+        return rows
+
+    def _answer(self, outcome, tool, args, **kw) -> Answer:
+        a = Answer(outcome, tool, args, trace=self._trace, **kw)
+        self._trace = []
+        return a
+
+    @property
+    def as_of(self) -> str:
+        """Latest merge date in the graph: 'today' for this dataset."""
+        if not self._as_of:
+            self._as_of = self.q("as_of", "MATCH (p:PR) RETURN max(p.merged)")[0][0] or dt.date.today().isoformat()
+        return self._as_of
+
+    def since(self, months: int) -> str:
+        d = dt.date.fromisoformat(self.as_of) - dt.timedelta(days=round(months * 30.44))
+        return d.isoformat()
+
+    # ---- resolution (runs before any traversal) -----------------------------------------
+    def resolve_dir(self, path: str):
+        """Exact OWNERS directory, else the nearest ancestor that has one (files work too).
+        Returns (dir_path, note) or (None, suggestions)."""
+        p = (path or "").strip().strip("/").removeprefix("kubernetes/").removeprefix("./") or "."
+        start = p
+        while True:
+            rows = self.q("resolve_dir", "MATCH (d:Dir {repo: 'kubernetes', path: $p}) WHERE d.has_owners RETURN d.path", {"p": p})
+            if rows and (p == start or p != "."):
+                # Walking up to the repo root would "resolve" any made-up path, so the root only
+                # counts when it was asked for directly.
+                if p == start:
+                    return p, ""
+                # A near-identical owned directory (a typo like "clientgo") beats walking up.
+                close = self._suggest_dirs(start, with_scores=True)
+                if close and close[0][0] >= 0.9 and close[0][1] != p and not start.startswith(close[0][1] + "/"):
+                    return None, [c for _, c in close]
+                return p, f"'{start}' has no OWNERS file of its own; using the nearest owned directory '{p}'."
+            if p in (".", ""):
+                break
+            p = posixpath.dirname(p) or "."
+        return None, self._suggest_dirs(start)
+
+    def _suggest_dirs(self, start: str, with_scores: bool = False):
+        """Close matches for a mistyped path, compared segment by segment (e.g. 'kublet' -> 'pkg/kubelet')."""
+        paths = [r[0] for r in self.q("all_dirs", "MATCH (d:Dir {repo: 'kubernetes'}) WHERE d.has_owners RETURN d.path")]
+        scored = []
+        for path in paths:
+            ratio = difflib.SequenceMatcher(None, start.lower(), path.lower()).ratio()
+            tail = difflib.SequenceMatcher(None, start.split("/")[-1].lower(), path.split("/")[-1].lower()).ratio()
+            scored.append((max(ratio, tail - 0.05), -len(path), path))
+        top = [(round(score, 3), p) for score, _, p in sorted(scored, reverse=True)[:5] if score >= 0.6]
+        return top if with_scores else [p for _, p in top]
+
+    def resolve_person(self, handle: str):
+        h = (handle or "").strip().lstrip("@").lower()
+        if self.q("resolve_person", "MATCH (p:Person {handle: $h}) RETURN p.handle", {"h": h}):
+            return h, None
+        sugg = [r[0] for r in self.q("suggest_person",
+                "MATCH (p:Person) WHERE p.handle CONTAINS $h RETURN p.handle LIMIT 5", {"h": h[:6]})]
+        return None, sugg
+
+    def resolve_kep(self, number):
+        try:
+            n = int(str(number).strip().lstrip("#").split("-")[0])
+        except ValueError:
+            return None, []
+        return (n, None) if self.q("resolve_kep", "MATCH (k:KEP {number: $n}) RETURN k.number", {"n": n}) else (None, [])
+
+    # ---- tool 1: who owns ----------------------------------------------------------------
+    def who_owns(self, path: str) -> Answer:
+        """Official ownership: the chain of OWNERS files from this directory up to the root,
+        with approvers at each level, the teams (SIGs) labelling it and the subprojects owning it."""
+        args = {"path": path}
+        d, extra = self.resolve_dir(path)
+        if not d:
+            return self._answer("unknown_entity", "who_owns", args, data={"suggestions": extra},
+                                note=f"No directory '{path}' with an OWNERS file in the graph.")
+        rows = self.q("ownership_chain", """
+            MATCH chain = (d:Dir {repo: 'kubernetes', path: $p})-[:INSIDE*0..10]->(o:Dir)
+            WITH o, length(chain) AS up, [n IN nodes(chain) | n.path] AS via
+            OPTIONAL MATCH (a:Person)-[r:APPROVER_OF]->(o)
+            WITH o, up, via, collect(DISTINCT {handle: a.handle, via: r.via}) AS approvers
+            OPTIONAL MATCH (o)-[:LABELED]->(s:SIG)
+            OPTIONAL MATCH (sp:Subproject)-[:OWNS]->(o)
+            OPTIONAL MATCH (sig2:SIG)-[:HAS_SUBPROJECT]->(sp)
+            RETURN o.path, up, via, approvers, collect(DISTINCT s.id) + collect(DISTINCT sig2.id),
+                   collect(DISTINCT sp.name), o.no_parent_owners
+            ORDER BY up""", {"p": d})
+        levels, path_nodes = [], []
+        for opath, up, via, approvers, sigs, subs, no_parent in rows:
+            levels.append({"dir": opath, "levels_up": up,
+                           "approvers": sorted({a["handle"] for a in approvers if a["handle"]}),
+                           "via_alias": sorted({a["via"] for a in approvers if a["handle"] and a["via"] != "direct"}),
+                           "sigs": sorted(set(sigs)), "subprojects": sorted(set(subs))})
+            path_nodes = via
+            if no_parent:  # this OWNERS file stops inheritance: parents' owners don't apply
+                levels[-1]["stops_inheritance"] = True
+                break
+        return self._answer("answered_with_path", "who_owns", args, data={"dir": d, "levels": levels},
+                            paths=[path_nodes], note=extra)
+
+    # ---- tool 2: who really knows (the drift view of one directory) ------------------------
+    def who_knows(self, path: str, months: int = 12) -> Answer:
+        """Listed approvers with their recent activity here and anywhere ("silent" if zero),
+        and unlisted people doing the work here ("shadow owners")."""
+        months = max(1, min(int(months), 24))
+        args = {"path": path, "months": months}
+        d, extra = self.resolve_dir(path)
+        if not d:
+            return self._answer("unknown_entity", "who_knows", args, data={"suggestions": extra},
+                                note=f"No directory '{path}' with an OWNERS file in the graph.")
+        since = self.since(months)
+        listed = self.q("listed_activity", f"""
+            MATCH (p:Person)-[r:APPROVER_OF]->(d:Dir {{repo: 'kubernetes', path: $p}})
+            OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR)-[:TOUCHES]->(:Dir)-[:INSIDE*0..10]->(d)
+              WHERE pr.merged >= $since
+            WITH p, r, d, count(DISTINCT pr) AS here
+            OPTIONAL MATCH (p)-[:{ACT}]->(pr2:PR) WHERE pr2.merged >= $since
+            RETURN p.handle, r.via, here, count(DISTINCT pr2) AS anywhere
+            ORDER BY here, anywhere, p.handle""", {"p": d, "since": since})
+        shadows = self.q("shadow_owners", f"""
+            MATCH (d:Dir {{repo: 'kubernetes', path: $p}})
+            MATCH (p:Person)-[a:{ACT}]->(pr:PR)-[:TOUCHES]->(:Dir)-[:INSIDE*0..10]->(d)
+              WHERE pr.merged >= $since
+            WITH d, p, count(DISTINCT pr) AS prs, collect(DISTINCT type(a)) AS how,
+                 collect(DISTINCT pr.number)[..3] AS examples
+            WHERE NOT (p)-[:APPROVER_OF|REVIEWER_OF]->(d)
+            OPTIONAL MATCH (d)-[:INSIDE*1..10]->(up:Dir)<-[:APPROVER_OF|REVIEWER_OF]-(p)
+            WITH p, prs, how, examples, count(up) AS listed_above
+            WHERE listed_above = 0
+            OPTIONAL MATCH (p)-[:APPROVER_OF|REVIEWER_OF]->(below:Dir)-[:INSIDE*1..10]->(:Dir {{repo: 'kubernetes', path: $p}})
+            RETURN p.handle, prs, how, examples, collect(DISTINCT below.path)[..3]
+            ORDER BY prs DESC, p.handle LIMIT 8""", {"p": d, "since": since})
+        approvers = [{"handle": h, "via": via, "prs_here": here, "prs_anywhere": anywhere,
+                      "status": "silent" if anywhere == 0 else ("quiet here" if here == 0 else "active")}
+                     for h, via, here, anywhere in listed]
+        shadow = [{"handle": h, "prs_here": n, "how": sorted(how), "example_prs": ex, "listed_below": below}
+                  for h, n, how, ex, below in shadows]
+        if not approvers and not shadow:
+            return self._answer("not_in_graph", "who_knows", args, data={"dir": d, "since": since},
+                                note=f"'{d}' lists no approvers of its own and saw no merged-PR activity since {since}. "
+                                     "That means the graph has no evidence either way, not that nobody owns it.")
+        paths = [[f"@{s['handle']}", f"PR #{s['example_prs'][0]}", d] for s in shadow[:3] if s["example_prs"]]
+        return self._answer("answered_with_path", "who_knows", args,
+                            data={"dir": d, "since": since, "as_of": self.as_of, "approvers": approvers, "shadow_owners": shadow},
+                            paths=paths, note=extra)
+
+    # ---- tool 3: org-wide drift --------------------------------------------------------
+    def drift_summary(self, months: int = 12, limit: int = 10) -> Answer:
+        """How stale the ownership records are across the whole org, and where it's worst."""
+        months, limit = max(1, min(int(months), 24)), max(1, min(int(limit), 25))
+        since = self.since(months)
+        org = self.q("org_silent", f"""
+            MATCH (p:Person)-[:APPROVER_OF]->(:Dir)
+            WITH DISTINCT p
+            OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR) WHERE pr.merged >= $since
+            WITH p, count(DISTINCT pr) AS n
+            RETURN count(p), sum(CASE WHEN n = 0 THEN 1 ELSE 0 END)""", {"since": since})[0]
+        worst = self.q("worst_dirs", f"""
+            MATCH (p:Person)-[:APPROVER_OF]->(:Dir)
+            WITH DISTINCT p
+            OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR) WHERE pr.merged >= $since
+            WITH p, count(DISTINCT pr) = 0 AS silent
+            MATCH (p)-[:APPROVER_OF]->(d:Dir) WHERE d.has_owners
+            WITH d, count(p) AS approvers, sum(CASE WHEN silent THEN 1 ELSE 0 END) AS silent
+            WHERE silent > 0
+            OPTIONAL MATCH (x:PR)-[:TOUCHES]->(d) WHERE x.merged >= $since
+            WITH d, approvers, silent, count(x) AS prs
+            WHERE prs > 0
+            RETURN d.path, approvers, silent, prs
+            ORDER BY prs * toFloat(silent) / approvers DESC, prs DESC LIMIT $limit""", {"since": since, "limit": limit})
+        return self._answer("answered_with_path", "drift_summary", {"months": months, "limit": limit},
+                            data={"since": since, "as_of": self.as_of, "approvers": org[0], "silent": int(org[1] or 0),
+                                  "worst_dirs": [{"dir": a, "approvers": b, "silent": int(c), "prs": e} for a, b, c, e in worst]})
+
+    # ---- tool 4: route new work to the right people --------------------------------------
+    def route(self, path: str, months: int = 6) -> Answer:
+        """Who to send a new issue or PR in this area to: people with recent review and approval
+        work here, owners first, each with an example PR as evidence."""
+        months = max(1, min(int(months), 24))
+        args = {"path": path, "months": months}
+        d, extra = self.resolve_dir(path)
+        if not d:
+            return self._answer("unknown_entity", "route", args, data={"suggestions": extra},
+                                note=f"No directory '{path}' with an OWNERS file in the graph.")
+        since = self.since(months)
+        rows = self.q("route_candidates", """
+            MATCH (d:Dir {repo: 'kubernetes', path: $p})
+            MATCH (p:Person)-[a:REVIEWED|LGTM|APPROVED_PR]->(pr:PR)-[:TOUCHES]->(:Dir)-[:INSIDE*0..10]->(d)
+              WHERE pr.merged >= $since
+            WITH d, p, count(DISTINCT pr) AS reviewed, sum(CASE WHEN type(a) = 'APPROVED_PR' THEN 1 ELSE 0 END) AS approvals,
+                 max(pr.merged) AS last, collect(DISTINCT pr.number)[..3] AS examples
+            OPTIONAL MATCH (p)-[r:APPROVER_OF|REVIEWER_OF]->(:Dir)<-[:INSIDE*0..10]-(d)
+            RETURN p.handle, reviewed, approvals, last, examples, collect(DISTINCT type(r))
+            ORDER BY approvals DESC, reviewed DESC LIMIT 5""", {"p": d, "since": since})
+        if not rows:
+            return self._answer("not_in_graph", "route", args, data={"dir": d, "since": since},
+                                note=f"No reviews or approvals on '{d}' since {since}; fall back to who_owns.")
+        people = [{"handle": h, "reviewed": n, "approvals": int(ap), "last_active": last, "example_prs": ex,
+                   "listed_as": sorted({r.replace('_OF', '').lower() for r in roles}) or ["not listed"]}
+                  for h, n, ap, last, ex, roles in rows]
+        return self._answer("answered_with_path", "route", args, data={"dir": d, "since": since, "people": people},
+                            paths=[[f"@{p['handle']}", f"reviewed PR #{p['example_prs'][0]}", d] for p in people[:3]],
+                            note=extra)
+
+    # ---- tool 5: decisions behind an area -------------------------------------------------
+    def why(self, kep: int | str) -> Answer:
+        """A decision record (KEP): who wrote, reviewed and approved it, which team owns it,
+        how far it got, related decisions, and whether its approvers are still active."""
+        args = {"kep": kep}
+        n, _ = self.resolve_kep(kep)
+        if n is None:
+            return self._answer("unknown_entity", "why", args, note=f"No enhancement proposal '{kep}' in the graph.")
+        since = self.since(12)
+        k = self.q("kep", """
+            MATCH (k:KEP {number: $n})
+            OPTIONAL MATCH (k)-[:OWNED_BY]->(s:SIG)
+            OPTIONAL MATCH (k)-[m:REACHED]->(v:Release)
+            RETURN k.title, k.status, k.stage, k.created, k.updated, k.url, s.id,
+                   collect(DISTINCT {stage: m.stage, version: v.version})""", {"n": n})[0]
+        people = self.q("kep_people", f"""
+            MATCH (p:Person)-[r:AUTHORED|REVIEWED_KEP|APPROVED_KEP]->(:KEP {{number: $n}})
+            OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR) WHERE pr.merged >= $since
+            RETURN p.handle, collect(DISTINCT type(r)), count(DISTINCT pr)""", {"n": n, "since": since})
+        related = self.q("kep_related", """
+            MATCH path = (k:KEP {number: $n})-[:SEE_ALSO|REPLACES|SUPERSEDED_BY*1..2]-(o:KEP)
+            RETURN o.number, o.title, [r IN relationships(path) | type(r)] LIMIT 8""", {"n": n})
+        role = {"AUTHORED": "author", "REVIEWED_KEP": "reviewer", "APPROVED_KEP": "approver"}
+        return self._answer("answered_with_path", "why", args, data={
+            "kep": n, "title": k[0], "status": k[1], "stage": k[2], "created": k[3], "updated": k[4], "url": k[5],
+            "owning_sig": k[6], "milestones": sorted([m for m in k[7] if m["version"]], key=lambda m: m["version"]),
+            "people": [{"handle": h, "roles": sorted(role[r] for r in rs), "prs_last_12m": c,
+                        "status": "silent" if c == 0 else "active"} for h, rs, c in people],
+            "related": [{"kep": a, "title": b, "via": c} for a, b, c in related]},
+            paths=[[f"KEP-{n}", f"owned by {k[6]}"]] + [[f"KEP-{n}", *r[2], f"KEP-{r[0]}"] for r in related[:3]])
+
+    # ---- tool 6: draft the fix (Act) ---------------------------------------------------------
+    def propose_owners_update(self, path: str, months: int = 12, min_prs: int = 10) -> Answer:
+        """Draft an OWNERS change for one directory: silent approvers move to
+        emeritus_approvers, active unlisted people with real review work are proposed as
+        reviewers. Every line carries its evidence. A draft for humans to approve; never applied."""
+        args = {"path": path, "months": months, "min_prs": min_prs}
+        k = self.who_knows(path, months)
+        self._trace = list(k.trace)  # keep the queries who_knows ran in this answer's trace
+        if k.outcome != "answered_with_path":
+            k.tool = "propose_owners_update"; k.args = args
+            return k
+        d = k.data["dir"]
+        silent = [a for a in k.data["approvers"] if a["status"] == "silent" and a["via"] == "direct"]
+        silent_alias = [a for a in k.data["approvers"] if a["status"] == "silent" and a["via"] != "direct"]
+        add = [s for s in k.data["shadow_owners"] if s["prs_here"] >= min_prs
+               and ({"REVIEWED", "LGTM", "APPROVED_PR"} & set(s["how"]))]
+        lines = [f"# Draft OWNERS update for {d} (generated by Drift, {k.data['as_of']}; needs human review)"]
+        evidence = []
+        for a in silent:
+            lines.append(f"-  approvers: {a['handle']}\n+  emeritus_approvers: {a['handle']}")
+            evidence.append(f"{a['handle']}: 0 reviews, approvals or merged PRs in kubernetes/kubernetes since {k.data['since']}")
+        for s in add:
+            lines.append(f"+  reviewers: {s['handle']}")
+            evidence.append(f"{s['handle']}: {s['prs_here']} merged PRs here since {k.data['since']} "
+                            f"({', '.join(x.lower() for x in s['how'])}), e.g. PR #{', #'.join(map(str, s['example_prs']))}")
+        notes = []
+        if silent_alias:
+            notes.append("Listed through a team alias, so the change belongs in OWNERS_ALIASES: "
+                         + ", ".join(f"{a['handle']} ({a['via']})" for a in silent_alias))
+        if not silent and not add and not silent_alias:
+            return self._answer("not_in_graph", "propose_owners_update", args, data={"dir": d},
+                                note=f"No drift found for '{d}': every listed approver is active and no unlisted person "
+                                     f"passes the {min_prs}-PR bar.", paths=k.paths)
+        return self._answer("answered_with_path", "propose_owners_update", args,
+                            data={"dir": d, "diff": "\n".join(lines), "evidence": evidence, "notes": notes,
+                                  "remove": [a["handle"] for a in silent], "add_reviewers": [s["handle"] for s in add]},
+                            paths=k.paths, note=k.note)
+
+
+CATALOGUE = {
+    "who_owns": {"fn": "who_owns", "args": {"path": "directory or file path in kubernetes/kubernetes"},
+                 "desc": "Official owners: the OWNERS chain from a directory up to the root, approvers and teams at each level."},
+    "who_knows": {"fn": "who_knows", "args": {"path": "directory path", "months": "int 1-24, default 12"},
+                  "desc": "Listed approvers with recent activity (silent if none) and unlisted people doing the work (shadow owners)."},
+    "drift_summary": {"fn": "drift_summary", "args": {"months": "int 1-24", "limit": "int 1-25"},
+                      "desc": "Org-wide: how many approvers are silent and which directories have the most stale ownership."},
+    "route": {"fn": "route", "args": {"path": "directory path", "months": "int 1-24, default 6"},
+              "desc": "Who to send a new issue or PR in this area to, by recent review and approval work, with evidence."},
+    "why": {"fn": "why", "args": {"kep": "KEP number, e.g. 2340"},
+            "desc": "A decision record: authors, approvers, owning team, milestones, related decisions, approvers still active?"},
+    "propose_owners_update": {"fn": "propose_owners_update",
+                              "args": {"path": "directory path", "months": "int", "min_prs": "int, default 10"},
+                              "desc": "Draft an OWNERS change for a directory with evidence for every line (a proposal, never applied)."},
+}
