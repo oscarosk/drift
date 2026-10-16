@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from orggraph.db import graph
 
 ACT = "AUTHORED_PR|REVIEWED|LGTM|APPROVED_PR"
+HOW = {"AUTHORED_PR": "wrote", "REVIEWED": "reviewed", "LGTM": "/lgtm", "APPROVED_PR": "/approve"}
 TIMEOUT_MS = 30000
 
 
@@ -172,6 +173,7 @@ class Tools:
             MATCH (d:Dir {{repo: 'kubernetes', path: $p}})
             MATCH (p:Person)-[a:{ACT}]->(pr:PR)-[:TOUCHES]->(:Dir)-[:INSIDE*0..10]->(d)
               WHERE pr.merged >= $since
+            WITH d, p, a, pr ORDER BY pr.merged DESC
             WITH d, p, count(DISTINCT pr) AS prs, collect(DISTINCT type(a)) AS how,
                  collect(DISTINCT pr.number)[..3] AS examples
             WHERE NOT (p)-[:APPROVER_OF|REVIEWER_OF]->(d)
@@ -238,6 +240,7 @@ class Tools:
             MATCH (d:Dir {repo: 'kubernetes', path: $p})
             MATCH (p:Person)-[a:REVIEWED|LGTM|APPROVED_PR]->(pr:PR)-[:TOUCHES]->(:Dir)-[:INSIDE*0..10]->(d)
               WHERE pr.merged >= $since
+            WITH d, p, a, pr ORDER BY pr.merged DESC
             WITH d, p, count(DISTINCT pr) AS reviewed, sum(CASE WHEN type(a) = 'APPROVED_PR' THEN 1 ELSE 0 END) AS approvals,
                  max(pr.merged) AS last, collect(DISTINCT pr.number)[..3] AS examples
             OPTIONAL MATCH (p)-[r:APPROVER_OF|REVIEWER_OF]->(:Dir)<-[:INSIDE*0..10]-(d)
@@ -308,7 +311,7 @@ class Tools:
         for s in add:
             lines.append(f"+  reviewers: {s['handle']}")
             evidence.append(f"{s['handle']}: {s['prs_here']} merged PRs here since {k.data['since']} "
-                            f"({', '.join(x.lower() for x in s['how'])}), e.g. PR #{', #'.join(map(str, s['example_prs']))}")
+                            f"({', '.join(HOW[x] for x in s['how'] if x in HOW)}), e.g. PR #{', #'.join(map(str, s['example_prs']))}")
         notes = []
         if silent_alias:
             notes.append("Listed through a team alias, so the change belongs in OWNERS_ALIASES: "

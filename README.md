@@ -40,7 +40,48 @@ python -m orggraph.fetch_reviews --since 2024-10-16   # reviews + approvals via 
 python scripts/build.py                               # downloads public files, builds both graphs, runs the backtest
 ```
 
+Then run the app:
+
+```bash
+uvicorn orggraph.api:app --port 8000      # web UI at http://localhost:8000
+python -m orggraph.agent "Who really works on pkg/kubelet/cm/cpumanager?"   # agent from the terminal
+python -m orggraph.mcp_server             # MCP server (stdio) for Claude Desktop, Cursor, VS Code
+python -m pytest -q tests                 # tests
+```
+
 Open http://localhost:3000 (FalkorDB Browser, host `localhost`, port `6379`) to explore the graphs.
+With `OPENAI_API_KEY` set, a model picks the tool and writes the sentence; without it, a keyword
+router and templates do, so everything works offline.
+
+### MCP
+
+```json
+{"mcpServers": {"drift": {"command": "python", "args": ["-m", "orggraph.mcp_server"], "cwd": "/path/to/drift"}}}
+```
+
+## How the agent works
+
+1. **A fixed tool catalogue.** The model chooses one of six tools and fills in arguments; it never
+   sees or writes Cypher. Every tool is a hand-written, parameterised query.
+2. **Names are resolved first.** A directory, person or KEP is looked up before any traversal runs.
+   Typos get suggestions (`pkg/kublet` → `pkg/kubelet`); a file path resolves to the directory whose
+   OWNERS file governs it, and the answer says so.
+3. **Four kinds of answer:** `answered_with_path`, `answered_from_memory`, `not_in_graph`
+   (the thing exists but nothing connects it that way) and `unknown_entity` (no query ran).
+4. **Checked sentences.** The model's sentence is rejected if it names a person, directory or KEP the
+   graph didn't return, or claims a finding when the result was empty; a template built from the rows
+   is used instead.
+5. **Memory is more nodes.** Answers are saved as `(:Finding)-[:ABOUT]->(...)` and shown, with the date
+   they were learned, next to a fresh re-check the next time the same thing comes up.
+
+| Tool | What it answers |
+|---|---|
+| `who_owns(path)` | The OWNERS chain from a directory up to the root, approvers and teams at each level |
+| `who_knows(path, months)` | Listed approvers with recent activity (silent if none), and shadow owners |
+| `drift_summary(months)` | Share of silent approvers org-wide, and the most drifted directories |
+| `route(path, months)` | Who to send new work to, by recent review and approval work, with example PRs |
+| `why(kep)` | A decision: authors, approvers, owning SIG, milestones, related KEPs, who is still active |
+| `propose_owners_update(path)` | A drafted OWNERS change with evidence for every line (never applied) |
 
 ## Data sources
 
@@ -140,7 +181,8 @@ More queries are added here as the agent tools are built.
 - Activity is merged PRs in one repository. Reviews on unmerged PRs and work in other repos are not counted.
 - Predicting *removal* of silent owners is weak (1.3× chance), because Kubernetes rarely cleans up
   its OWNERS files. We report it anyway; the stale records are the finding.
-- OWNERS `no_parent_owners` (which stops inheritance) is recorded but not yet applied to queries.
+- OWNERS `no_parent_owners` (which stops inheritance) is applied in `who_owns`, not yet in the activity queries.
+- Memory lives in the same graph, so rebuilding the graph clears it.
 
 ## Use of AI coding assistants
 
