@@ -99,4 +99,21 @@ def template(answer) -> str:
                 + f" and add {len(d['add_reviewers'])} reviewer(s)"
                 + (f" ({', '.join('@' + h for h in d['add_reviewers'])})" if d["add_reviewers"] else "")
                 + ". Every line has its evidence; nothing is applied without a human.")
+    if t == "suggest_reviewers":
+        p = d["people"]
+        silent = sorted({h for a in d["areas"] for h in a["silent_approvers"]})
+        msg = (f"For a change touching {', '.join(a['dir'] for a in d['areas'][:3])}"
+               + (f" and {len(d['areas']) - 3} more" if len(d["areas"]) > 3 else "")
+               + f", ask {_people(p, n=3)}: they reviewed the most there since {d['since']}"
+               + f" (@{p[0]['handle']}: {p[0]['reviewed']} PRs reviewed, {p[0]['approvals']} approvals).")
+        if silent:
+            msg += f" Listed approvers with no activity in the last year: {', '.join('@' + h for h in silent[:4])}."
+        return msg
+    if t == "areas":
+        a = d["areas"]
+        return f"{sum(x['state'] == 'drifting' for x in a)} of {len(a)} owned directories have silent approvers."
+    if t == "cleanup_queue":
+        q = d["queue"]
+        return (f"{len(q)} drafted OWNERS fixes: {sum(len(x['remove']) for x in q)} silent approver listings to move to emeritus "
+                f"and {sum(len(x['add_reviewers']) for x in q)} reviewers to add.")
     return answer.note or "Done."

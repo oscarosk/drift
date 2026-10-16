@@ -11,18 +11,18 @@
 :root {
   --paper: #F4F6F8; --sheet: #FFFFFF; --ink: #1B2230; --muted: #5A687D; --rule: #D9DEE5;
   --silent: #8E4A66; --silent-bg: #F6EBF0; --active: #1D7468; --active-bg: #E5F2EF;
-  --mark: #E9EEF6; --focus: #2F5DA8;
+  --mark: #E9EEF6; --focus: #2F5DA8; --shade: rgba(27, 34, 48, .28);
   --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --paper: #12161D; --sheet: #1A2029; --ink: #E6EAF0; --muted: #9AA6B8; --rule: #2C3542;
-    --silent: #D68FAE; --silent-bg: #3A2330; --active: #6CC6B4; --active-bg: #19302C; --mark: #222B38; --focus: #8DB3F2;
+    --silent: #D68FAE; --silent-bg: #3A2330; --active: #6CC6B4; --active-bg: #19302C; --mark: #222B38; --focus: #8DB3F2; --shade: rgba(0,0,0,.5);
   }
 }
 :root[data-theme="dark"] {
   --paper: #12161D; --sheet: #1A2029; --ink: #E6EAF0; --muted: #9AA6B8; --rule: #2C3542;
-  --silent: #D68FAE; --silent-bg: #3A2330; --active: #6CC6B4; --active-bg: #19302C; --mark: #222B38; --focus: #8DB3F2;
+  --silent: #D68FAE; --silent-bg: #3A2330; --active: #6CC6B4; --active-bg: #19302C; --mark: #222B38; --focus: #8DB3F2; --shade: rgba(0,0,0,.5);
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -32,70 +32,97 @@ a:hover { text-decoration-color: currentColor; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
 code, .mono { font-family: var(--mono); font-size: .92em; }
 .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
-
-header { padding: 40px 0 28px; border-bottom: 1px solid var(--rule); }
-.brand { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
-.brand h1 { margin: 0; font-size: 40px; font-weight: 700; letter-spacing: -0.02em; }
-.brand p { margin: 0; color: var(--muted); font-size: 18px; }
-.lede { margin: 22px 0 0; font-size: 26px; line-height: 1.3; font-weight: 500; max-width: 30ch; letter-spacing: -0.01em; }
-.lede-wide { max-width: 44ch; }
-.scope { margin: 10px 0 0; color: var(--muted); font-size: 14px; max-width: 70ch; }
-
-form.ask { display: flex; gap: 8px; margin: 28px 0 10px; }
-form.ask input { flex: 1; min-width: 0; font: inherit; font-size: 17px; padding: 12px 14px; border: 1px solid var(--rule);
-  border-radius: 8px; background: var(--sheet); color: var(--ink); }
-button { font: inherit; font-weight: 600; padding: 12px 18px; border-radius: 8px; border: 1px solid var(--ink);
+.muted { color: var(--muted); }
+.empty { color: var(--muted); }
+button { font: inherit; font-weight: 600; padding: 10px 16px; border-radius: 8px; border: 1px solid var(--ink);
   background: var(--ink); color: var(--paper); cursor: pointer; }
+button[disabled] { opacity: .45; cursor: not-allowed; }
 button.quiet { background: transparent; color: var(--ink); border-color: var(--rule); font-weight: 500; padding: 6px 12px; font-size: 14px; }
-.examples { display: flex; flex-wrap: wrap; gap: 8px; }
+input[type=text], input[type=search], textarea { font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule);
+  border-radius: 8px; padding: 10px 12px; width: 100%; }
+textarea { font-family: var(--mono); font-size: 14px; line-height: 1.5; resize: vertical; min-height: 120px; }
 
-.answer { margin: 18px 0 0; padding: 18px 20px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; }
-.answer[hidden] { display: none; }
-.answer .text { font-size: 18px; margin: 0; }
-.answer .how { margin: 10px 0 0; color: var(--muted); font-size: 14px; }
-.tag { display: inline-block; font-size: 13px; padding: 1px 8px; border-radius: 999px; background: var(--mark); color: var(--ink); }
-.tag.unknown_entity, .tag.not_in_graph { background: var(--silent-bg); color: var(--silent); }
-.chain { display: flex; flex-wrap: wrap; align-items: center; gap: 0; margin: 12px 0 0; padding: 0; list-style: none; }
-.chain li { font-family: var(--mono); font-size: 13.5px; padding: 3px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); }
-.chain li + li { margin-left: 22px; position: relative; }
-.chain li + li::before { content: ""; position: absolute; left: -22px; top: 50%; width: 22px; border-top: 1.5px solid var(--muted); }
-details.trace { margin-top: 10px; font-size: 14px; color: var(--muted); }
-details.trace summary { cursor: pointer; }
-details.trace table { border-collapse: collapse; margin-top: 6px; }
-details.trace td { padding: 2px 14px 2px 0; font-family: var(--mono); font-size: 13px; }
-.memory { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+/* ---- app bar ---- */
+.bar { position: sticky; top: 0; z-index: 20; background: var(--paper); border-bottom: 1px solid var(--rule); }
+.bar-row { display: flex; align-items: center; gap: 18px; padding: 12px 0; }
+.logo { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; text-decoration: none; }
+.org { display: flex; flex-direction: column; line-height: 1.25; }
+.org .name { font-family: var(--mono); font-size: 14px; }
+.org .fresh { font-size: 12.5px; color: var(--muted); }
+form.ask { display: flex; gap: 6px; margin-left: auto; flex: 0 1 460px; }
+form.ask input { padding: 8px 12px; font-size: 15px; }
+form.ask button { padding: 8px 14px; }
+nav.tabs { display: flex; gap: 26px; overflow-x: auto; }
+nav.tabs a { text-decoration: none; padding: 9px 0 10px; border-bottom: 2px solid transparent; color: var(--muted); white-space: nowrap; font-weight: 500; }
+nav.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--ink); }
+.status { padding: 10px 0; border-bottom: 1px solid var(--rule); font-size: 15px; }
+.status b { font-weight: 600; }
 
-main { display: grid; grid-template-columns: 300px 1fr; gap: 36px; padding: 32px 0 48px; }
-aside h2, main h2 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
-aside .sub { color: var(--muted); font-size: 14px; margin: 0 0 12px; }
-.stale { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
-.stale li { border-bottom: 1px solid var(--rule); }
-.stale button { all: unset; display: block; width: 100%; padding: 10px 6px; cursor: pointer; box-sizing: border-box; }
-.stale button:hover, .stale button[aria-current="true"] { background: var(--mark); }
-.stale button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.stale .p { font-family: var(--mono); font-size: 13.5px; word-break: break-all; }
-.stale .n { display: block; color: var(--muted); font-size: 13px; }
+/* ---- views ---- */
+.view { padding: 28px 0 56px; }
+.view-head h1 { font-size: 26px; margin: 0; letter-spacing: -0.01em; font-weight: 600; }
+.view-head p { margin: 6px 0 0; color: var(--muted); max-width: 72ch; }
+.two { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 36px; margin-top: 24px; }
+.panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; }
+.panel h2 { font-size: 16px; margin: 0 0 4px; }
+.row-actions { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+.hint { font-size: 13.5px; color: var(--muted); margin: 8px 0 0; }
+h2.sec { font-size: 16px; margin: 0 0 2px; }
+p.sec-sub { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
 
-.dir-head h2 { font-family: var(--mono); font-size: 22px; font-weight: 500; margin: 0; word-break: break-all; }
-.dir-head p { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
-.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 26px; }
-.col h3 { font-size: 16px; margin: 0 0 2px; }
-.col .sub { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
 .people { list-style: none; margin: 0; padding: 0; }
-.people li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 9px 0; border-top: 1px solid var(--rule); }
+.people li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 0; border-top: 1px solid var(--rule); }
 .people .who { font-weight: 600; }
 .people .meta { grid-column: 1 / -1; color: var(--muted); font-size: 13.5px; }
 .people .num { font-variant-numeric: tabular-nums; font-size: 14px; }
-.people li.silent .who { color: var(--silent); }
-.people li.silent .num { color: var(--silent); }
-.bar { grid-column: 1 / -1; height: 4px; background: var(--mark); border-radius: 2px; overflow: hidden; }
-.bar span { display: block; height: 100%; background: var(--active); }
+.people li.silent .who, .people li.silent .num { color: var(--silent); }
+.meter { grid-column: 1 / -1; height: 4px; background: var(--mark); border-radius: 2px; overflow: hidden; }
+.meter span { display: block; height: 100%; background: var(--active); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.chip { font-family: var(--mono); font-size: 12.5px; padding: 1px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); }
+.chip.silent { color: var(--silent); border-color: var(--silent-bg); background: var(--silent-bg); }
 
-.file { margin-top: 34px; }
-.file h3 { font-size: 16px; margin: 0 0 2px; }
-.file .sub { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+.chain { display: flex; flex-wrap: wrap; align-items: center; margin: 12px 0 0; padding: 0; list-style: none; row-gap: 8px; }
+.chain li { font-family: var(--mono); font-size: 13px; padding: 3px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); }
+.chain li + li { margin-left: 22px; position: relative; }
+.chain li + li::before { content: ""; position: absolute; left: -22px; top: 50%; width: 22px; border-top: 1.5px solid var(--muted); }
+details.trace { margin-top: 12px; font-size: 14px; color: var(--muted); }
+details.trace summary { cursor: pointer; }
+details.trace table { border-collapse: collapse; margin-top: 6px; }
+details.trace td { padding: 2px 14px 2px 0; font-family: var(--mono); font-size: 12.5px; }
+
+/* areas table */
+.filters { display: flex; gap: 12px; align-items: center; margin-top: 22px; flex-wrap: wrap; }
+.filters input { max-width: 420px; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: transparent; color: var(--muted); font-weight: 500; padding: 7px 12px; font-size: 14px; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+table.areas { width: 100%; border-collapse: collapse; margin-top: 14px; }
+table.areas th { text-align: left; font-size: 13.5px; font-weight: 500; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--rule); }
+table.areas td { padding: 9px 10px; border-bottom: 1px solid var(--rule); font-size: 14.5px; vertical-align: top; }
+table.areas td.p a { font-family: var(--mono); font-size: 13.5px; word-break: break-all; }
+table.areas td.n { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+table.areas th.n { text-align: right; }
+table.areas tr:hover td { background: var(--mark); }
+.state { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; white-space: nowrap; }
+.state::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.state.drifting { color: var(--silent); } .state.drifting::before { background: var(--silent); }
+.state.healthy { color: var(--active); } .state.healthy::before { background: var(--active); }
+
+/* directory */
+.back { font-size: 14px; color: var(--muted); }
+.dir-head h1 { font-family: var(--mono); font-size: 22px; font-weight: 500; margin: 6px 0 0; word-break: break-all; }
+.dir-head p { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 24px; }
+.levels { margin: 12px 0 0; font-size: 14px; color: var(--muted); }
+.levels summary { cursor: pointer; }
+.levels ol { margin: 8px 0 0; padding-left: 20px; }
+
+/* the OWNERS file */
+.file { margin-top: 32px; }
 .diff { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
-.diff .fname { font-family: var(--mono); font-size: 13px; color: var(--muted); padding: 8px 14px; border-bottom: 1px solid var(--rule); }
+.diff .fname { font-family: var(--mono); font-size: 13px; color: var(--muted); padding: 8px 14px; border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; gap: 12px; }
 .line { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); border-bottom: 1px solid var(--rule); }
 .line:last-child { border-bottom: 0; }
 .line pre { margin: 0; padding: 7px 14px; font: 13.5px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; }
@@ -103,234 +130,343 @@ aside .sub { color: var(--muted); font-size: 14px; margin: 0 0 12px; }
 .line.add pre { background: var(--active-bg); color: var(--active); }
 .line .why { padding: 7px 14px; font-size: 13.5px; color: var(--muted); border-left: 1px solid var(--rule); }
 .notes { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
-.actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
-.actions span { color: var(--muted); font-size: 14px; }
 
-.levels { margin: 14px 0 0; font-size: 14px; color: var(--muted); }
-.levels summary { cursor: pointer; }
-.levels ol { margin: 8px 0 0; padding-left: 20px; }
-.levels li { margin: 4px 0; }
+/* cleanup queue */
+.queue-bar { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 22px;
+  padding: 12px 14px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; position: sticky; top: 118px; z-index: 5; }
+.queue-bar label { display: inline-flex; gap: 8px; align-items: center; font-size: 14.5px; cursor: pointer; }
+.queue { list-style: none; margin: 16px 0 0; padding: 0; }
+.queue > li { border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); margin-bottom: 10px; }
+.q-head { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; padding: 12px 14px; }
+.q-head input { margin-top: 5px; width: 16px; height: 16px; accent-color: var(--ink); }
+.q-head .p { font-family: var(--mono); font-size: 14px; word-break: break-all; }
+.q-head .what { font-size: 14px; color: var(--muted); }
+.q-body { border-top: 1px solid var(--rule); padding: 10px 14px 12px 42px; font-size: 14px; }
+.q-body ul { margin: 0; padding-left: 18px; }
+.q-body li { margin: 3px 0; }
+.cmd { font-family: var(--mono); font-size: 13px; background: var(--mark); padding: 2px 6px; border-radius: 4px; }
 
-section.proof { border-top: 1px solid var(--rule); padding: 34px 0 20px; }
-section.proof h2 { font-size: 22px; margin: 0 0 6px; letter-spacing: -0.01em; }
-section.proof .sub { color: var(--muted); margin: 0 0 18px; max-width: 70ch; }
-.findings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
-.findings p { margin: 0; font-size: 17px; }
+/* proof */
+.findings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-top: 24px; }
+.findings p { margin: 0; font-size: 18px; }
 .findings .src { display: block; margin-top: 6px; color: var(--muted); font-size: 14px; }
+.method { margin-top: 32px; max-width: 72ch; }
+.method h2 { font-size: 16px; margin: 22px 0 4px; }
+.method p, .method li { color: var(--muted); }
+
+/* ask drawer */
+.shade { position: fixed; inset: 0; background: var(--shade); z-index: 40; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(500px, 100%); background: var(--sheet); border-left: 1px solid var(--rule);
+  z-index: 41; display: flex; flex-direction: column; }
+.drawer[hidden], .shade[hidden] { display: none; }
+.drawer header { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--rule); }
+.drawer header h2 { font-size: 16px; margin: 0; }
+.drawer .body { padding: 18px; overflow-y: auto; }
+.drawer .q { font-weight: 600; margin: 0 0 8px; }
+.drawer .a { font-size: 17px; margin: 0; }
+.drawer .how { color: var(--muted); font-size: 13.5px; margin: 10px 0 0; }
+.tag { display: inline-block; font-size: 12.5px; padding: 1px 8px; border-radius: 999px; background: var(--mark); color: var(--ink); }
+.tag.unknown_entity, .tag.not_in_graph { background: var(--silent-bg); color: var(--silent); }
+.drawer .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.memory { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+.drawer hr { border: 0; border-top: 1px solid var(--rule); margin: 18px 0; }
+
 footer { border-top: 1px solid var(--rule); padding: 18px 0 40px; color: var(--muted); font-size: 14px; }
-.empty { color: var(--muted); }
 
 @media (max-width: 900px) {
-  main { grid-template-columns: 1fr; }
-  .cols, .findings { grid-template-columns: 1fr; }
+  .two, .cols, .findings { grid-template-columns: 1fr; }
   .line { grid-template-columns: 1fr; }
   .line .why { border-left: 0; border-top: 1px dashed var(--rule); }
-  .lede { font-size: 22px; }
+  .bar-row { flex-wrap: wrap; }
+  form.ask { flex: 1 1 100%; margin-left: 0; }
+  .queue-bar { position: static; }
+  table.areas .hide-sm { display: none; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .answer:not([hidden]) { animation: show .18s ease-out; }
-  @keyframes show { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+  .drawer:not([hidden]) { animation: slide .16s ease-out; }
+  @keyframes slide { from { transform: translateX(16px); opacity: .6; } to { transform: none; opacity: 1; } }
 }
 </style>
 </head>
 <body>
-<header>
+<div class="bar">
   <div class="wrap">
-    <div class="brand">
-      <h1>Drift</h1>
-      <p>Who the records say owns Kubernetes, next to who actually does the work.</p>
+    <div class="bar-row">
+      <a class="logo" href="#/reviewer">Drift</a>
+      <div class="org"><span class="name">kubernetes/kubernetes</span><span class="fresh" id="fresh">Loading…</span></div>
+      <form class="ask" id="ask" role="search">
+        <input type="text" id="q" aria-label="Ask Drift" placeholder="Ask: who really works on pkg/kubelet?" autocomplete="off">
+        <button type="submit">Ask</button>
+      </form>
     </div>
-    <p class="lede lede-wide" id="lede">Loading the graph…</p>
-    <p class="scope">Built from Kubernetes' public OWNERS files, enhancement proposals, and the merged pull requests, reviews,
-      <code>/lgtm</code> and <code>/approve</code> commands in kubernetes/kubernetes. Activity elsewhere isn't counted, so "silent" means silent here, not gone.</p>
-
-    <form class="ask" id="ask">
-      <input id="q" name="q" aria-label="Question" autocomplete="off" placeholder="Ask about a directory or a KEP, e.g. who really works on pkg/kubelet/cm/cpumanager?">
-      <button type="submit">Ask</button>
-    </form>
-    <div class="examples" id="examples"></div>
-
-    <div class="answer" id="answer" hidden aria-live="polite"></div>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#/reviewer" data-tab="reviewer">Find a reviewer</a>
+      <a href="#/areas" data-tab="areas">Areas</a>
+      <a href="#/cleanup" data-tab="cleanup">Cleanup queue</a>
+      <a href="#/proof" data-tab="proof">How we know</a>
+    </nav>
   </div>
-</header>
-
-<div class="wrap">
-  <main>
-    <aside>
-      <h2>Where the records drifted most</h2>
-      <p class="sub" id="aside-sub">Directories with silent approvers, weighted by how much work merged there.</p>
-      <ul class="stale" id="stale"></ul>
-    </aside>
-    <div id="dir"><p class="empty">Pick a directory on the left, or ask a question above.</p></div>
-  </main>
-
-  <section class="proof" id="proof" hidden>
-    <h2>Did it hold up a year later?</h2>
-    <p class="sub">Drift was run on the organisation as it stood on <span id="bt-date"></span>, using only activity from the year
-      before that date, and checked against today's OWNERS files.</p>
-    <div class="findings" id="findings"></div>
-  </section>
 </div>
+<div class="status"><div class="wrap" id="status">Reading the ownership records…</div></div>
 
-<footer>
-  <div class="wrap">Drift runs on FalkorDB. Only public GitHub handles are stored; no emails, names or comment text.
-    Every answer is a fixed, parameterised graph query; the model never writes queries.</div>
-</footer>
+<div class="wrap"><div id="view" class="view"></div></div>
+
+<footer><div class="wrap">Drift compares Kubernetes' OWNERS files with merged pull requests, reviews, <code>/lgtm</code> and <code>/approve</code>
+  in kubernetes/kubernetes. Activity in other repositories isn't counted, so "silent" means silent here, not gone.
+  Only public GitHub handles are stored. Runs on FalkorDB.</div></footer>
+
+<div class="shade" id="shade" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Answer">
+  <header><h2>Ask Drift</h2><button type="button" class="quiet" id="close">Close</button></header>
+  <div class="body" id="drawer-body"></div>
+</aside>
 
 <script>
-const $ = (s) => document.querySelector(s);
+const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const gh = (h) => `<a href="https://github.com/${esc(h)}" target="_blank" rel="noopener">@${esc(h)}</a>`;
 const pr = (n) => `<a class="mono" href="https://github.com/kubernetes/kubernetes/pull/${esc(n)}" target="_blank" rel="noopener">#${esc(n)}</a>`;
-const tree = (p) => `https://github.com/kubernetes/kubernetes/tree/master/${p === "." ? "" : esc(p)}`;
-const session = (() => { try { let s = localStorage.getItem("drift-session"); if (!s) { s = Math.random().toString(36).slice(2, 10); localStorage.setItem("drift-session", s); } return s; } catch { return "web"; } })();
+const areaLink = (p) => `<a href="#/area/${encodeURIComponent(p)}">${esc(p)}</a>`;
+const linkify = (t) => esc(t).replace(/@([A-Za-z0-9][A-Za-z0-9-]*)/g, (_, h) => gh(h)).replace(/#(\d{5,7})\b/g, (_, n) => pr(n));
+const HOW = { AUTHORED_PR: "wrote", REVIEWED: "reviewed", LGTM: "/lgtm", APPROVED_PR: "/approve" };
 const OUTCOME = { answered_with_path: "answered with a path", answered_from_memory: "answered from memory", not_in_graph: "not in the graph", unknown_entity: "unknown name" };
-const linkify = (text) => esc(text).replace(/@([A-Za-z0-9][A-Za-z0-9-]*)/g, (_, h) => gh(h));
+const session = (() => { try { let s = localStorage.getItem("drift-session"); if (!s) { s = Math.random().toString(36).slice(2, 10); localStorage.setItem("drift-session", s); } return s; } catch { return "web"; } })();
+const state = { areas: null, queue: null, summary: null, picked: new Set() };
 
-async function getJSON(url, opts) {
+async function api(url, opts) {
   const r = await fetch(url, opts);
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Request failed (${r.status})`);
-  return r.json();
+  return r;
 }
+const getJSON = async (u, o) => (await api(u, o)).json();
+const post = (u, body) => getJSON(u, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+const chain = (paths) => (paths || []).slice(0, 3).map((p) => `<ol class="chain">${p.map((n) => `<li>${esc(n)}</li>`).join("")}</ol>`).join("");
+const trace = (t) => !t || !t.length ? "" : `<details class="trace"><summary>${t.length} graph queries, ${t.reduce((a, x) => a + x.ms, 0).toFixed(0)} ms</summary><table>${
+  t.map((x) => `<tr><td>${esc(x.query)}</td><td>${x.ms} ms</td><td>${x.rows} rows</td></tr>`).join("")}</table></details>`;
+const fail = (el, err) => { el.innerHTML = `<p class="empty">${esc(err.message)}. Check that FalkorDB is running and the graph is built.</p>`; };
 
-function chain(paths) {
-  if (!paths || !paths.length) return "";
-  return paths.slice(0, 3).map((p) => `<ol class="chain">${p.map((n) => `<li>${esc(n)}</li>`).join("")}</ol>`).join("");
+// ---- routing ------------------------------------------------------------------------------
+const routes = { reviewer: viewReviewer, areas: viewAreas, area: viewArea, cleanup: viewCleanup, proof: viewProof };
+function route() {
+  const [, name = "reviewer", ...rest] = location.hash.split("/");
+  const fn = routes[name] || viewReviewer;
+  document.querySelectorAll("nav.tabs a").forEach((a) => a.setAttribute("aria-current", a.dataset.tab === (name === "area" ? "areas" : name) ? "page" : "false"));
+  fn(decodeURIComponent(rest.join("/")));
+  window.scrollTo(0, 0);
 }
+window.addEventListener("hashchange", route);
 
-function trace(t) {
-  if (!t || !t.length) return "";
-  const total = t.reduce((a, x) => a + x.ms, 0);
-  return `<details class="trace"><summary>${t.length} graph queries, ${total.toFixed(0)} ms</summary><table>${
-    t.map((x) => `<tr><td>${esc(x.query)}</td><td>${x.ms} ms</td><td>${x.rows} rows</td></tr>`).join("")}</table></details>`;
+// ---- find a reviewer ----------------------------------------------------------------------
+const EXAMPLE_FILES = "pkg/kubelet/cm/cpumanager/policy_static.go\npkg/kubelet/cm/memorymanager/policy_static.go\npkg/kubelet/kubelet.go";
+function viewReviewer() {
+  const v = $("#view");
+  v.innerHTML = `<div class="view-head"><h1>Find a reviewer</h1>
+      <p>Paste the files your change touches. Drift finds the people who actually review that code now, and tells you which listed owners have gone quiet.</p></div>
+    <div class="two">
+      <div><div class="panel">
+        <label for="files"><h2>Files or directories</h2></label>
+        <p class="hint" style="margin:0 0 10px">One per line, or a merged PR number.</p>
+        <textarea id="files" spellcheck="false" placeholder="pkg/kubelet/cm/cpumanager/policy_static.go"></textarea>
+        <div class="row-actions"><button type="button" id="find">Find reviewers</button><button type="button" class="quiet" id="example">Try an example</button></div>
+      </div></div>
+      <div id="rev-out"><p class="empty">Results show here: who to ask, the areas they cover, and their recent PRs as evidence.</p></div>
+    </div>`;
+  $("#example").onclick = () => { $("#files").value = EXAMPLE_FILES; findReviewers(); };
+  $("#find").onclick = findReviewers;
+  $("#files").addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") findReviewers(); });
 }
-
-// ---- asking ---------------------------------------------------------------------------
-const EXAMPLES = [
-  "How stale is ownership across Kubernetes?",
-  "Who really works on pkg/kubelet/cm/cpumanager?",
-  "Who should review a PR in staging/src/k8s.io/client-go?",
-  "Why was KEP 2340 decided?",
-  "Who owns pkg/kublet?",
-];
-$("#examples").innerHTML = EXAMPLES.map((e) => `<button type="button" class="quiet">${esc(e)}</button>`).join("");
-$("#examples").addEventListener("click", (e) => { if (e.target.tagName === "BUTTON") { $("#q").value = e.target.textContent; ask(); } });
-$("#ask").addEventListener("submit", (e) => { e.preventDefault(); ask(); });
-
-async function ask() {
-  const q = $("#q").value.trim();
-  const box = $("#answer");
-  if (!q) { $("#q").focus(); return; }
-  box.hidden = false;
-  box.innerHTML = `<p class="text empty">Walking the graph…</p>`;
+async function findReviewers() {
+  const raw = $("#files").value.trim(), out = $("#rev-out");
+  if (!raw) { $("#files").focus(); return; }
+  out.innerHTML = `<p class="empty">Walking the graph…</p>`;
   try {
-    const r = await getJSON("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q, session }) });
-    const mem = (r.memory || []).slice(0, 2).map((m) => `<p class="memory">Learned on ${esc(m.learned_at.slice(0, 10))}: ${linkify(m.text)}</p>`).join("");
-    const sugg = (r.data && r.data.suggestions || []).map((s) => `<button type="button" class="quiet" data-dir="${esc(s)}">${esc(s)}</button>`).join(" ");
-    box.innerHTML = `<p class="text">${linkify(r.text)}</p>
-      ${sugg ? `<div class="examples" style="margin-top:10px">${sugg}</div>` : ""}
-      ${chain(r.paths)}
-      <p class="how"><span class="tag ${esc(r.outcome)}">${esc(OUTCOME[r.outcome] || r.outcome)}</span>
-        ${r.tool ? `Tool <code>${esc(r.tool)}</code>, chosen by ${esc(r.picked_by)}; sentence by ${esc(r.written_by)}.` : ""}</p>
-      ${r.note ? `<p class="how">${esc(r.note)}</p>` : ""}
-      ${mem}${trace(r.trace)}`;
-    box.querySelectorAll("[data-dir]").forEach((b) => b.addEventListener("click", () => openDir(b.dataset.dir)));
-    if (r.data && r.data.dir) openDir(r.data.dir, false);
-  } catch (err) {
-    box.innerHTML = `<p class="text">${esc(err.message)}. Check that FalkorDB is running and the graph is built.</p>`;
-  }
+    const body = /^#?\d+$/.test(raw) ? { pr: parseInt(raw.replace("#", ""), 10) } : { paths: raw };
+    const r = await post("/api/reviewers", body);
+    if (r.outcome !== "answered_with_path") { out.innerHTML = `<p>${esc(r.note || r.text)}</p>`; return; }
+    const d = r.data, max = Math.max(1, ...d.people.map((p) => p.score));
+    out.innerHTML = `<h2 class="sec">Ask these people</h2><p class="sec-sub">Ranked by reviews and approvals in these areas since ${esc(d.since)}.</p>
+      <ul class="people">${d.people.map((p) => `<li><span class="who">${gh(p.handle)}</span><span class="num">${p.reviewed} reviewed, ${p.approvals} approved</span>
+        <div class="meter"><span style="width:${(100 * p.score / max).toFixed(1)}%"></span></div>
+        <span class="meta">Last active ${esc(p.last_active)}; e.g. ${p.example_prs.map(pr).join(" ")}<span class="chips">${p.areas.map((a) => `<span class="chip">${esc(a)}</span>`).join("")}</span></span></li>`).join("")}</ul>
+      <h2 class="sec" style="margin-top:26px">Listed owners of these areas</h2><p class="sec-sub">From the OWNERS chain of each area. Marked if silent for a year.</p>
+      <ul class="people">${d.areas.map((a) => `<li><span class="who">${areaLink(a.dir)}</span><span class="num">${a.approvers} approvers up the chain</span>
+        <span class="meta">${a.silent_approvers.length ? `<span class="chips">${a.silent_approvers.map((h) => `<span class="chip silent">${esc(h)}</span>`).join("")}</span> no reviews, approvals or PRs in a year` : "All listed approvers active in the last year."}</span></li>`).join("")}</ul>
+      ${r.note ? `<p class="hint">${esc(r.note)}</p>` : ""}${trace(r.trace)}`;
+  } catch (err) { fail(out, err); }
 }
 
-// ---- directory view -------------------------------------------------------------------
-async function openDir(path, scroll = true) {
-  location.hash = "dir=" + encodeURIComponent(path);
-  document.querySelectorAll(".stale button").forEach((b) => b.setAttribute("aria-current", b.dataset.dir === path ? "true" : "false"));
-  const el = $("#dir");
-  el.innerHTML = `<p class="empty">Loading ${esc(path)}…</p>`;
+// ---- areas -------------------------------------------------------------------------------
+async function viewAreas() {
+  const v = $("#view");
+  v.innerHTML = `<div class="view-head"><h1>Areas</h1><p>Every directory with an OWNERS file. "Drifting" means at least one listed approver has no reviews, approvals or merged PRs in the last year.</p></div>
+    <div class="filters"><input type="search" id="find-area" aria-label="Filter directories" placeholder="Filter, e.g. kubelet">
+      <div class="seg" role="group" aria-label="State">${["all", "drifting", "healthy", "inherits"].map((s) => `<button type="button" data-s="${s}" aria-pressed="${s === "all"}">${s[0].toUpperCase() + s.slice(1)}</button>`).join("")}</div>
+      <span class="muted" id="area-count"></span></div>
+    <div id="area-table"><p class="empty">Loading…</p></div>`;
+  try {
+    state.areas = state.areas || (await getJSON("/api/areas")).data;
+  } catch (err) { return fail($("#area-table"), err); }
+  let filt = "all";
+  const render = () => {
+    const q = $("#find-area").value.trim().toLowerCase();
+    const rows = state.areas.areas.filter((a) => (filt === "all" || a.state === filt) && (!q || a.dir.toLowerCase().includes(q)));
+    $("#area-count").textContent = `${rows.length} of ${state.areas.areas.length}`;
+    $("#area-table").innerHTML = `<table class="areas"><thead><tr><th>Directory</th><th>State</th><th class="n">Silent approvers</th><th class="n hide-sm">Merged PRs, 12 months</th></tr></thead><tbody>${
+      rows.slice(0, 250).map((a) => `<tr><td class="p">${areaLink(a.dir)}</td><td><span class="state ${a.state}">${a.state === "inherits" ? "inherits owners" : a.state}</span></td>
+        <td class="n">${a.approvers ? `${a.silent} of ${a.approvers}` : "none listed"}</td><td class="n hide-sm">${a.prs}</td></tr>`).join("")}</tbody></table>
+      ${rows.length > 250 ? `<p class="hint">Showing the first 250. Narrow the filter to see more.</p>` : ""}${rows.length ? "" : `<p class="empty">No directory matches. Try a shorter filter.</p>`}`;
+  };
+  $("#find-area").addEventListener("input", render);
+  v.querySelectorAll(".seg button").forEach((b) => b.onclick = () => { filt = b.dataset.s; v.querySelectorAll(".seg button").forEach((x) => x.setAttribute("aria-pressed", x === b)); render(); });
+  render();
+}
+
+// ---- one area ----------------------------------------------------------------------------
+async function viewArea(path) {
+  const v = $("#view");
+  v.innerHTML = `<a class="back" href="#/areas">Areas</a><p class="empty">Loading ${esc(path)}…</p>`;
   let r;
-  try { r = await getJSON("/api/dir?path=" + encodeURIComponent(path)); }
-  catch (err) { el.innerHTML = `<p class="empty">${esc(err.message)}</p>`; return; }
-  if (!r.knows) { el.innerHTML = `<p>${esc(r.owns.text)}</p>`; return; }
+  try { r = await getJSON("/api/dir?path=" + encodeURIComponent(path)); } catch (err) { return fail(v, err); }
+  if (!r.knows) { v.innerHTML = `<a class="back" href="#/areas">Areas</a><p>${linkify(r.owns.text)}</p>`; return; }
   const own = r.owns.data, k = r.knows.data, draft = r.draft;
   const sig = (own.levels.find((l) => l.sigs.length) || { sigs: [] }).sigs;
-  const maxPrs = Math.max(1, ...(k.approvers || []).map((a) => a.prs_here), ...(k.shadow_owners || []).map((s) => s.prs_here));
-  const silentN = (k.approvers || []).filter((a) => a.status === "silent").length;
-
-  const listed = (k.approvers || []).length ? (k.approvers.slice().reverse()).map((a) => `
-    <li class="${a.status === "silent" ? "silent" : ""}">
+  const max = Math.max(1, ...k.approvers.map((a) => a.prs_here), ...k.shadow_owners.map((s) => s.prs_here));
+  const silentN = k.approvers.filter((a) => a.status === "silent").length;
+  const listed = k.approvers.length ? k.approvers.slice().reverse().map((a) => `<li class="${a.status === "silent" ? "silent" : ""}">
       <span class="who">${gh(a.handle)}</span><span class="num">${a.prs_here} here</span>
-      <div class="bar"><span style="width:${(100 * a.prs_here / maxPrs).toFixed(1)}%"></span></div>
-      <span class="meta">${a.status === "silent" ? `No reviews, approvals or merged PRs since ${esc(k.since)}` : `${a.prs_anywhere} PRs across the repo`}${a.via !== "direct" ? `, listed through <code>${esc(a.via)}</code>` : ""}</span>
-    </li>`).join("") : `<li><span class="meta">This OWNERS file lists no approvers of its own; see the chain above.</span></li>`;
-
-  const shadow = (k.shadow_owners || []).length ? k.shadow_owners.map((s) => `
-    <li>
+      <div class="meter"><span style="width:${(100 * a.prs_here / max).toFixed(1)}%"></span></div>
+      <span class="meta">${a.status === "silent" ? `No reviews, approvals or merged PRs since ${esc(k.since)}` : `${a.prs_anywhere} PRs across the repo`}${a.via !== "direct" ? `; listed through <code>${esc(a.via)}</code>` : ""}</span></li>`).join("")
+    : `<li><span class="meta">No approvers listed here; approval comes from the chain above.</span></li>`;
+  const shadow = k.shadow_owners.length ? k.shadow_owners.map((s) => `<li>
       <span class="who">${gh(s.handle)}</span><span class="num">${s.prs_here} here</span>
-      <div class="bar"><span style="width:${(100 * s.prs_here / maxPrs).toFixed(1)}%"></span></div>
-      <span class="meta">${s.how.map((h) => ({ AUTHORED_PR: "wrote", REVIEWED: "reviewed", LGTM: "/lgtm", APPROVED_PR: "/approve" }[h] || h)).join(", ")}; e.g. ${s.example_prs.map(pr).join(" ")}${s.listed_below.length ? `; listed on ${s.listed_below.map((x) => `<code>${esc(x)}</code>`).join(", ")}` : ""}</span>
-    </li>`).join("") : `<li><span class="meta">Nobody outside the listed owners worked here since ${esc(k.since)}.</span></li>`;
-
-  let file = "";
-  if (draft.outcome === "answered_with_path") {
-    const d = draft.data, ev = d.evidence;
-    const rows = [];
+      <div class="meter"><span style="width:${(100 * s.prs_here / max).toFixed(1)}%"></span></div>
+      <span class="meta">${s.how.map((h) => HOW[h] || h).join(", ")}; e.g. ${s.example_prs.map(pr).join(" ")}${s.listed_below.length ? `; listed on ${s.listed_below.map((x) => `<code>${esc(x)}</code>`).join(", ")}` : ""}</span></li>`).join("")
+    : `<li><span class="meta">Nobody outside the listed owners worked here since ${esc(k.since)}.</span></li>`;
+  let file;
+  if (draft.outcome === "answered_with_path" && (draft.data.remove.length || draft.data.add_reviewers.length)) {
+    const d = draft.data, ev = d.evidence, rows = [];
     d.remove.forEach((h, i) => {
       rows.push(`<div class="line del"><pre>approvers:\n  - ${esc(h)}</pre><div class="why">${linkify("@" + ev[i])}</div></div>`);
-      rows.push(`<div class="line add"><pre>emeritus_approvers:\n  - ${esc(h)}</pre><div class="why">Keeps the history of who owned this.</div></div>`);
+      rows.push(`<div class="line add"><pre>emeritus_approvers:\n  - ${esc(h)}</pre><div class="why">Keeps the record of who owned this.</div></div>`);
     });
-    d.add_reviewers.forEach((h, j) => rows.push(`<div class="line add"><pre>reviewers:\n  - ${esc(h)}</pre><div class="why">${linkify("@" + ev[d.remove.length + j]).replace(/#(\d+)/g, (_, n) => pr(n))}</div></div>`));
-    file = `<div class="file"><h3>Drafted fix</h3>
-      <p class="sub">A proposal for a human to review, built from the evidence on the right of each line. Drift never edits Kubernetes.</p>
-      ${rows.length ? `<div class="diff"><div class="fname">${esc(d.dir)}/OWNERS</div>${rows.join("")}</div>` : ""}
+    d.add_reviewers.forEach((h, j) => rows.push(`<div class="line add"><pre>reviewers:\n  - ${esc(h)}</pre><div class="why">${linkify("@" + ev[d.remove.length + j])}</div></div>`));
+    file = `<div class="file"><h2 class="sec">Drafted fix</h2><p class="sec-sub">For a maintainer to review. Evidence sits beside each line; Drift never edits Kubernetes itself.</p>
+      <div class="diff"><div class="fname"><span>${esc(d.dir)}/OWNERS</span><a href="https://github.com/kubernetes/kubernetes/blob/master/${esc(d.dir === "." ? "" : d.dir + "/")}OWNERS" target="_blank" rel="noopener">View current file</a></div>${rows.join("")}</div>
       ${d.notes.map((n) => `<p class="notes">${linkify(n)}</p>`).join("")}
-      <div class="actions"><button type="button" class="quiet" id="copy">Copy draft</button><span id="copied" aria-live="polite"></span></div></div>`;
+      <div class="row-actions"><button type="button" id="dl-one">Download patch</button><button type="button" class="quiet" id="add-q">${state.picked.has(d.dir) ? "In cleanup queue" : "Add to cleanup queue"}</button></div></div>`;
   } else {
-    file = `<div class="file"><h3>Drafted fix</h3><p class="sub">${esc(draft.note || "No change needed.")}</p></div>`;
+    file = `<div class="file"><h2 class="sec">Drafted fix</h2><p class="sec-sub">${esc(draft.note || "No change needed here.")}</p></div>`;
   }
-
-  el.innerHTML = `<div class="dir-head"><h2><a href="${tree(k.dir)}" target="_blank" rel="noopener">${esc(k.dir)}</a></h2>
-      <p>${sig.length ? `Owned by ${sig.map(esc).join(", ")}. ` : ""}${silentN} of ${(k.approvers || []).length} listed approvers silent since ${esc(k.since)}; activity up to ${esc(k.as_of)}.</p>
+  v.innerHTML = `<a class="back" href="#/areas">Areas</a>
+    <div class="dir-head"><h1><a href="https://github.com/kubernetes/kubernetes/tree/master/${k.dir === "." ? "" : esc(k.dir)}" target="_blank" rel="noopener">${esc(k.dir)}</a></h1>
+      <p>${sig.length ? `Owned by ${sig.map(esc).join(", ")}. ` : ""}${silentN} of ${k.approvers.length} listed approvers silent since ${esc(k.since)}.</p>
       ${chain(r.owns.paths)}
       <details class="levels"><summary>Approvers at each level of the chain</summary><ol>${own.levels.map((l) =>
         `<li><code>${esc(l.dir)}</code>: ${l.approvers.length ? l.approvers.map(gh).join(", ") : "none listed"}${l.stops_inheritance ? " (inheritance stops here)" : ""}</li>`).join("")}</ol></details>
-    </div>
+      ${r.owns.note ? `<p class="hint">${esc(r.owns.note)}</p>` : ""}</div>
     <div class="cols">
-      <div class="col"><h3>What OWNERS says</h3><p class="sub">Approvers listed for this directory.</p><ul class="people">${listed}</ul></div>
-      <div class="col"><h3>Who actually does the work</h3><p class="sub">Not listed here or above, ranked by merged PRs they wrote, reviewed or approved here.</p><ul class="people">${shadow}</ul></div>
-    </div>
-    ${file}${trace([...(r.knows.trace || [])])}`;
-  const copy = $("#copy");
-  if (copy) copy.addEventListener("click", async () => {
-    const text = draft.data.diff + "\n\nEvidence:\n" + draft.data.evidence.map((e) => "- " + e).join("\n");
-    try { await navigator.clipboard.writeText(text); $("#copied").textContent = "Copied."; } catch { $("#copied").textContent = "Copy isn't available here."; }
-  });
-  if (scroll) el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+      <div><h2 class="sec">What OWNERS says</h2><p class="sec-sub">Approvers listed for this directory.</p><ul class="people">${listed}</ul></div>
+      <div><h2 class="sec">Who actually does the work</h2><p class="sec-sub">Not listed here or above; ranked by merged PRs they wrote, reviewed or approved here.</p><ul class="people">${shadow}</ul></div>
+    </div>${file}${trace(r.knows.trace)}`;
+  const dl = $("#dl-one"); if (dl) dl.onclick = () => downloadPatch([k.dir], dl);
+  const aq = $("#add-q"); if (aq) aq.onclick = () => { state.picked.add(k.dir); aq.textContent = "In cleanup queue"; };
 }
 
-// ---- first load ---------------------------------------------------------------------
-(async function init() {
+// ---- cleanup queue -----------------------------------------------------------------------
+async function viewCleanup() {
+  const v = $("#view");
+  v.innerHTML = `<div class="view-head"><h1>Cleanup queue</h1>
+      <p>Drafted OWNERS changes for the directories that drifted most. Each one moves silent approvers to <code>emeritus_approvers</code> and adds up to three people who review there. Tick the ones you agree with and download a single patch.</p></div>
+    <div id="queue"><p class="empty">Drafting fixes from the last year of activity…</p></div>`;
+  try { state.queue = state.queue || (await getJSON("/api/cleanup")).data; } catch (err) { return fail($("#queue"), err); }
+  const q = state.queue.queue;
+  if (!state.picked.size) q.forEach((x) => state.picked.add(x.dir));
+  const count = () => q.filter((x) => state.picked.has(x.dir)).length;
+  $("#queue").innerHTML = `<div class="queue-bar"><label><input type="checkbox" id="all" ${count() === q.length ? "checked" : ""}> Select all ${q.length}</label>
+      <span class="muted"><span id="n">${count()}</span> selected. Apply with <span class="cmd">git apply drift-owners.patch</span></span>
+      <button type="button" id="dl">Download patch</button></div>
+    <ul class="queue">${q.map((x) => `<li><div class="q-head"><input type="checkbox" data-dir="${esc(x.dir)}" aria-label="Include ${esc(x.dir)}" ${state.picked.has(x.dir) ? "checked" : ""}>
+        <div><div class="p">${areaLink(x.dir)}</div><div class="what">${x.remove.length ? `Move ${x.remove.map(esc).join(", ")} to emeritus` : ""}${x.remove.length && x.add_reviewers.length ? "; " : ""}${x.add_reviewers.length ? `add ${x.add_reviewers.map(esc).join(", ")} as reviewer${x.add_reviewers.length > 1 ? "s" : ""}` : ""}</div></div>
+        <button type="button" class="quiet" data-toggle aria-expanded="false">Evidence</button></div>
+        <div class="q-body" hidden><ul>${x.evidence.map((e) => `<li>${linkify("@" + e)}</li>`).join("")}</ul>${x.notes.map((n) => `<p class="notes">${linkify(n)}</p>`).join("")}</div></li>`).join("")}</ul>`;
+  const sync = () => { $("#n").textContent = count(); $("#all").checked = count() === q.length; $("#dl").disabled = count() === 0; };
+  $("#queue").querySelectorAll("input[data-dir]").forEach((c) => c.onchange = () => { c.checked ? state.picked.add(c.dataset.dir) : state.picked.delete(c.dataset.dir); sync(); });
+  $("#all").onchange = (e) => { q.forEach((x) => e.target.checked ? state.picked.add(x.dir) : state.picked.delete(x.dir)); $("#queue").querySelectorAll("input[data-dir]").forEach((c) => c.checked = e.target.checked); sync(); };
+  $("#queue").querySelectorAll("[data-toggle]").forEach((b) => b.onclick = () => { const body = b.closest("li").querySelector(".q-body"); body.hidden = !body.hidden; b.setAttribute("aria-expanded", !body.hidden); });
+  $("#dl").onclick = () => downloadPatch(q.filter((x) => state.picked.has(x.dir)).map((x) => x.dir), $("#dl"));
+  sync();
+}
+async function downloadPatch(dirs, btn) {
+  const label = btn.textContent; btn.disabled = true; btn.textContent = "Building patch…";
   try {
-    const r = await getJSON("/api/summary");
-    const s = r.summary.data;
-    $("#lede").textContent = `${s.silent} of ${s.approvers} Kubernetes approvers have done no reviews, approvals or merged PRs in kubernetes/kubernetes since ${s.since}. Their names are still in the OWNERS files.`;
-    $("#stale").innerHTML = s.worst_dirs.map((d) => `<li><button type="button" data-dir="${esc(d.dir)}">
-      <span class="p">${esc(d.dir)}</span><span class="n">${d.silent} of ${d.approvers} approvers silent, ${d.prs} merged PRs</span></button></li>`).join("");
-    $("#stale").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) openDir(b.dataset.dir); });
-    const bt = r.backtest;
-    if (bt) {
-      const so = bt.silent_owners, sh = bt.shadow_owners, t30 = sh.top_k.find((x) => x.k === 30) || sh.top_k[0];
-      $("#bt-date").textContent = bt.snapshot;
-      $("#findings").innerHTML = `
-        <p>${so.silent_then} of ${so.approvers_then} approvers had been silent for a year.<span class="src">On ${esc(bt.snapshot)}, counting reviews, /lgtm, /approve and merged PRs.</span></p>
-        <p>${so.silent_still_listed_now} of those ${so.silent_then} were still approvers a year later.<span class="src">The records rarely catch up on their own, which is why predicting removals only beats chance by ${so.lift}×.</span></p>
-        <p>The ${t30.k} busiest non-owner reviewers became owners at ${t30.lift}× the base rate.<span class="src">${t30.who.map(gh).join(", ")} were listed within the year.</span></p>`;
-      $("#proof").hidden = false;
-    }
-    const start = decodeURIComponent((location.hash.match(/dir=([^&]+)/) || [])[1] || "") || (s.worst_dirs[0] && s.worst_dirs[0].dir);
-    if (start) openDir(start, false);
-  } catch (err) {
-    $("#lede").textContent = "Can't reach the graph. Start FalkorDB and build the graph (python scripts/build.py), then reload.";
+    const r = await api("/api/patch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dirs }) });
+    const url = URL.createObjectURL(await r.blob());
+    const a = Object.assign(document.createElement("a"), { href: url, download: "drift-owners.patch" });
+    document.body.append(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    btn.textContent = "Downloaded";
+  } catch (err) { btn.textContent = err.message.slice(0, 60); }
+  setTimeout(() => { btn.textContent = label; btn.disabled = false; }, 2500);
+}
+
+// ---- how we know -------------------------------------------------------------------------
+async function viewProof() {
+  const v = $("#view");
+  v.innerHTML = `<div class="view-head"><h1>How we know it works</h1><p id="proof-sub">Loading…</p></div><div class="findings" id="findings"></div>
+    <div class="method">
+      <h2>The test</h2><p>Drift keeps two graphs of the same organisation side by side in FalkorDB: the OWNERS files as they were a year ago with only the activity before that date, and today's. It ran its normal queries on the year-old graph, which never sees the future, and the results were checked against today's OWNERS files.</p>
+      <h2>What counts as activity</h2><p>Merged pull requests in kubernetes/kubernetes that a person wrote, reviewed, or commented <code>/lgtm</code> or <code>/approve</code> on. Reviews on unmerged PRs and work in other repositories are not counted, so a silent approver may well be busy elsewhere.</p>
+      <h2>Limits</h2><ul><li>Predicting who will be removed barely beats chance, because stale entries are rarely cleaned up. That gap is the problem Drift exists to close.</li><li>One repository, two years of activity. The numbers are regenerated by <code>python -m orggraph.backtest</code> and stored in <code>results/backtest.json</code>.</li></ul>
+    </div>`;
+  try {
+    const bt = (state.summary || (state.summary = await getJSON("/api/summary"))).backtest;
+    if (!bt) { $("#proof-sub").textContent = "Run python -m orggraph.backtest to produce the results."; return; }
+    const so = bt.silent_owners, t30 = bt.shadow_owners.top_k.find((x) => x.k === 30) || bt.shadow_owners.top_k[0];
+    $("#proof-sub").textContent = `Drift was run on the organisation as it stood on ${bt.snapshot}, using only the year of activity before that date, then checked against today.`;
+    $("#findings").innerHTML = `<p>${so.silent_then} of ${so.approvers_then} approvers had been silent for a year.<span class="src">On ${esc(bt.snapshot)}: no reviews, /lgtm, /approve or merged PRs.</span></p>
+      <p>${so.silent_still_listed_now} of those ${so.silent_then} were still approvers a year later.<span class="src">The records rarely catch up on their own; predicting removals beats chance by only ${so.lift}×.</span></p>
+      <p>The ${t30.k} busiest non-owner reviewers became owners at ${t30.lift}× the base rate.<span class="src">${t30.who.map(gh).join(", ")} were listed within the year.</span></p>`;
+  } catch (err) { fail($("#findings"), err); }
+}
+
+// ---- ask drawer --------------------------------------------------------------------------
+const EXAMPLES = ["How stale is ownership across Kubernetes?", "Who really works on pkg/kubelet/cm/cpumanager?", "Why was KEP 2340 decided?", "Who owns pkg/kublet?"];
+function openDrawer(html) { $("#drawer-body").innerHTML = html; $("#drawer").hidden = false; $("#shade").hidden = false; $("#close").focus(); }
+function closeDrawer() { $("#drawer").hidden = true; $("#shade").hidden = true; $("#q").focus(); }
+$("#close").onclick = closeDrawer; $("#shade").onclick = closeDrawer;
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#drawer").hidden) closeDrawer(); });
+$("#ask").addEventListener("submit", (e) => { e.preventDefault(); ask($("#q").value.trim()); });
+async function ask(q) {
+  if (!q) {
+    openDrawer(`<p class="muted">Ask about a directory, a person's area, or a KEP. For example:</p><div class="examples">${EXAMPLES.map((x) => `<button type="button" class="quiet" data-ex>${esc(x)}</button>`).join("")}</div>`);
+    $("#drawer-body").querySelectorAll("[data-ex]").forEach((b) => b.onclick = () => { $("#q").value = b.textContent; ask(b.textContent); });
+    return;
   }
+  openDrawer(`<p class="q">${esc(q)}</p><p class="empty">Walking the graph…</p>`);
+  try {
+    const r = await post("/api/ask", { question: q, session });
+    const sugg = (r.data && r.data.suggestions || []).map((s) => `<button type="button" class="quiet" data-dir="${esc(s)}">${esc(s)}</button>`).join("");
+    const mem = (r.memory || []).slice(0, 2).map((m) => `<p class="memory">Learned ${esc(m.learned_at.slice(0, 10))}: ${linkify(m.text)}</p>`).join("");
+    $("#drawer-body").innerHTML = `<p class="q">${esc(q)}</p><p class="a">${linkify(r.text)}</p>
+      ${sugg ? `<div class="examples">${sugg}</div>` : ""}${chain(r.paths)}
+      ${r.data && r.data.dir ? `<p class="how"><a href="#/area/${encodeURIComponent(r.data.dir)}">Open ${esc(r.data.dir)}</a></p>` : ""}
+      <p class="how"><span class="tag ${esc(r.outcome)}">${esc(OUTCOME[r.outcome] || r.outcome)}</span> ${r.tool ? `Tool <code>${esc(r.tool)}</code>, chosen by ${esc(r.picked_by)}; sentence by ${esc(r.written_by)}.` : ""}</p>
+      ${r.note && !r.text.includes(r.note) ? `<p class="how">${esc(r.note)}</p>` : ""}${mem ? `<hr>${mem}` : ""}${trace(r.trace)}
+      <hr><div class="examples">${EXAMPLES.filter((x) => x !== q).slice(0, 3).map((x) => `<button type="button" class="quiet" data-ex>${esc(x)}</button>`).join("")}</div>`;
+    $("#drawer-body").querySelectorAll("[data-dir]").forEach((b) => b.onclick = () => { closeDrawer(); location.hash = "#/area/" + encodeURIComponent(b.dataset.dir); });
+    $("#drawer-body").querySelectorAll("a[href^='#/area/']").forEach((a) => a.addEventListener("click", closeDrawer));
+    $("#drawer-body").querySelectorAll("[data-ex]").forEach((b) => b.onclick = () => { $("#q").value = b.textContent; ask(b.textContent); });
+  } catch (err) { $("#drawer-body").innerHTML = `<p class="q">${esc(q)}</p><p>${esc(err.message)}</p>`; }
+}
+
+// ---- start -------------------------------------------------------------------------------
+(async function init() {
+  route();
+  try {
+    state.summary = await getJSON("/api/summary");
+    const s = state.summary.summary.data;
+    $("#fresh").textContent = `Activity up to ${s.as_of}`;
+    $("#status").innerHTML = `<b>${s.silent} of ${s.approvers} approvers</b> have done no reviews, approvals or merged PRs here since ${esc(s.since)}, and are still listed. <a href="#/cleanup">See the drafted fixes</a>`;
+  } catch (err) { $("#status").textContent = "Can't reach the graph. Start FalkorDB, build the graph (python scripts/build.py), then reload."; $("#fresh").textContent = "Offline"; }
 })();
 </script>
 </body>

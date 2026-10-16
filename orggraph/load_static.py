@@ -113,12 +113,15 @@ def load_owners(g, root=None):
     dirs, edges, labels = [], {r: [] for r in ROLES.values()}, []
     for f in glob.glob(os.path.join(root, "**", "OWNERS"), recursive=True):
         path = os.path.relpath(os.path.dirname(f), root).replace(os.sep, "/")
-        d = yaml.safe_load(open(f, encoding="utf-8")) or {}
+        raw = open(f, encoding="utf-8").read()
+        d = yaml.safe_load(raw) or {}
+        has_filters = "filters" in d
         if "filters" in d:  # filtered OWNERS: the ".*" filter applies to every file
             d = {**d, **(d["filters"].get(".*") or {})}
         did = dir_id("kubernetes", path)
         dirs.append({"id": did, "path": "." if path == "." else path,
-                     "no_parent": bool((d.get("options") or {}).get("no_parent_owners"))})
+                     "no_parent": bool((d.get("options") or {}).get("no_parent_owners")),
+                     "text": raw, "filters": has_filters})
         for key, rel in ROLES.items():
             for h, via in expand(d.get(key)):
                 edges[rel].append({"handle": h, "dir": did, "via": via or "direct"})
@@ -129,7 +132,8 @@ def load_owners(g, root=None):
     run_batched(g, """
         UNWIND $rows AS r
         MERGE (d:Dir {id: r.id})
-        SET d.repo = 'kubernetes', d.path = r.path, d.no_parent_owners = r.no_parent, d.has_owners = true""", dirs)
+        SET d.repo = 'kubernetes', d.path = r.path, d.no_parent_owners = r.no_parent, d.has_owners = true,
+            d.owners_text = r.text, d.has_filters = r.filters""", dirs)
 
     # Parent links: each OWNERS dir points at the nearest ancestor dir that has its own OWNERS file.
     # Ownership is inherited upward, so "who owns X" walks this chain.

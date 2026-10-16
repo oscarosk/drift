@@ -77,5 +77,20 @@ def propose_owners_update(path: str, months: int = 12, min_prs: int = 10) -> dic
     return _out(tools().propose_owners_update(path, months, min_prs))
 
 
+@server.tool(annotations=READ_ONLY)
+def suggest_reviewers(paths: str = "", pr: int | None = None, months: int = 6) -> dict:
+    """Who should review a change: give the file paths it touches (or a merged PR number). Returns people with
+    recent review and approval work in those areas, and whether each area's listed approvers are still active."""
+    return _out(tools().suggest_reviewers(paths=paths, pr=pr, months=months))
+
+
+@server.tool(annotations=READ_ONLY)
+def owners_patch(dirs: list[str]) -> dict:
+    """A git-apply-able patch of drafted OWNERS changes for these directories, with evidence in its header.
+    Returned as text for a human to review; nothing is applied."""
+    a = tools().owners_patch(dirs)
+    return {"outcome": a.outcome, "patch": a.data.get("patch", ""), "skipped": a.data.get("skipped", []), "note": a.note}
+
+
 if __name__ == "__main__":
     server.run("stdio")

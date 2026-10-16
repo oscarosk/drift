@@ -64,6 +64,9 @@ def route_offline(question: str):
     if path and re.search(r"\b(draft|propose|fix|update)\b", q):
         return "propose_owners_update", {"path": path}
     if path and re.search(r"\b(review|send|route|assign|who should)\b", q):
+        paths = [m.rstrip(".,?;:)") for m in PATH_RE.findall(question)]
+        if len(paths) > 1 or "." in paths[0].split("/")[-1]:  # several paths or a file: a concrete change
+            return "suggest_reviewers", {"paths": " ".join(paths)}
         return "route", {"path": path}
     if path and re.search(r"\b(knows|really|actually|silent|stale|shadow|active|drift)\b", q):
         return "who_knows", {"path": path}
