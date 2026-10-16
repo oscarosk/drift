@@ -42,18 +42,19 @@ MATCH (p:Person)-[:APPROVER_OF]->(d:Dir {repo: 'kubernetes'})
 WHERE d.has_owners
 RETURN p.handle, d.path"""
 
-# People not listed in any OWNERS file, ranked by how much reviewing they did.
+# Everyone ranked by how much reviewing they did; owners are filtered out in Python using
+# Q_LISTED_PEOPLE (a per-row "NOT (p)-[...]->()" check here was too slow on large graphs).
 Q_SHADOW_PEOPLE = f"""
 MATCH (p:Person)-[:{REVIEW_ACT}]->(pr:PR) WHERE pr.merged >= $since
 WITH p, count(DISTINCT pr) AS reviewed
-WHERE NOT (p)-[:APPROVER_OF|REVIEWER_OF]->(:Dir)
 RETURN p.handle AS person, reviewed ORDER BY reviewed DESC, person"""
 
 Q_LISTED_PEOPLE = "MATCH (p:Person)-[:APPROVER_OF|REVIEWER_OF]->(:Dir) RETURN DISTINCT p.handle"
 
 
 def rows(g, q, params=None):
-    return g.ro_query(q, params or {}).result_set
+    # Explicit 60 s limit: FalkorDB's default query timeout can be lower than this needs.
+    return g.ro_query(q, params or {}, timeout=60000).result_set
 
 
 def main():
@@ -84,7 +85,8 @@ def main():
     }
 
     # --- shadow owners --------------------------------------------------------------
-    pool = rows(then, Q_SHADOW_PEOPLE, {"since": WINDOW_START})
+    listed_then = {h for (h,) in rows(then, Q_LISTED_PEOPLE)}
+    pool = [(h, n) for h, n in rows(then, Q_SHADOW_PEOPLE, {"since": WINDOW_START}) if h not in listed_then]
     listed_now = {h for (h,) in rows(now, Q_LISTED_PEOPLE)}
     base_s = sum(h in listed_now for h, _ in pool) / len(pool)
     shadow_res = {"active_non_owners_then": len(pool), "base_rate": round(base_s, 4), "top_k": []}

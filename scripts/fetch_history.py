@@ -33,8 +33,9 @@ def main():
 
     # 2. Every merged PR with the files it changed. Kubernetes merges every PR with a
     #    "Merge pull request #N from user/branch" commit, so diffing each merge against its
-    #    first parent gives exactly the PR's files.
-    log = git("log", tip, "--merges", "--diff-merges=first-parent", "--name-only",
+    #    first parent gives exactly the PR's files. --no-renames: rename detection would make
+    #    git download file contents one by one, and we only need the paths.
+    log = git("log", tip, "--merges", "--diff-merges=first-parent", "--name-only", "--no-renames",
               f"--since={SINCE}", "--format=@@%cd|%s", "--date=short", capture=True)
     out, cur = [], None
     for line in log.splitlines():
