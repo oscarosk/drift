@@ -16,7 +16,7 @@ Tracks: **Company Brain** (primary), **Agents That Act on Connected Data**.
 docker compose up -d                 # FalkorDB on :6379, Browser on :3000
 pip install -r requirements.txt
 cp .env.example .env                 # add your keys
-./scripts/fetch_data.sh              # sparse-clones the public Kubernetes files (~1 min)
+python scripts/fetch_data.py          # sparse-clones the public Kubernetes files (~1 min)
 python -m orggraph.load_static       # builds the graph (~3 s)
 ```
 

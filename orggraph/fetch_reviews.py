@@ -102,7 +102,7 @@ def main():
     if not token:
         sys.exit("Set GITHUB_TOKEN in .env first.")
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    done = set(open(DONE).read().split()) if os.path.exists(DONE) else set()
+    done = set(open(DONE, encoding="utf-8").read().split()) if os.path.exists(DONE) else set()
 
     # Search returns at most 1000 results per query, so query in 7-day windows (~60-120 PRs each).
     total = 0
@@ -121,10 +121,10 @@ def main():
             after = res["pageInfo"]["endCursor"]
         if res["issueCount"] > 1000:
             print(f"  warning: {key} has {res['issueCount']} PRs (>1000), some missed")
-        with open(OUT, "a") as f:
+        with open(OUT, "a", encoding="utf-8") as f:
             for r in rows:
                 f.write(json.dumps(r) + "\n")
-        with open(DONE, "a") as f:
+        with open(DONE, "a", encoding="utf-8") as f:
             f.write(key + "\n")
         total += len(rows)
         print(f"{key}: {len(rows)} PRs (total {total}, API points left {data['rateLimit']['remaining']})")

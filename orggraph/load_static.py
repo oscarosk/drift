@@ -12,6 +12,7 @@ Run:  python -m orggraph.load_static
 """
 import glob
 import os
+import posixpath
 import re
 
 import yaml
@@ -47,7 +48,7 @@ def dir_id(repo: str, path: str) -> str:
 
 
 def load_sigs(g):
-    d = yaml.safe_load(open(os.path.join(DATA, "community", "sigs.yaml")))
+    d = yaml.safe_load(open(os.path.join(DATA, "community", "sigs.yaml"), encoding="utf-8"))
     sigs, leads, subs, sub_dirs = [], [], [], []
     for s in d["sigs"]:
         sid = s["dir"]  # e.g. 'sig-node' (same id KEPs and OWNERS labels use)
@@ -96,7 +97,7 @@ ROLES = {  # OWNERS key -> relationship type
 
 def load_owners(g):
     root = os.path.join(DATA, "k8s")
-    aliases = yaml.safe_load(open(os.path.join(root, "OWNERS_ALIASES")))["aliases"]
+    aliases = yaml.safe_load(open(os.path.join(root, "OWNERS_ALIASES"), encoding="utf-8"))["aliases"]
 
     def expand(names):
         """Turn ['sig-node-approvers', 'dims'] into [('alice','sig-node-approvers'), ('dims', None)]."""
@@ -111,8 +112,8 @@ def load_owners(g):
 
     dirs, edges, labels = [], {r: [] for r in ROLES.values()}, []
     for f in glob.glob(os.path.join(root, "**", "OWNERS"), recursive=True):
-        path = os.path.relpath(os.path.dirname(f), root)
-        d = yaml.safe_load(open(f)) or {}
+        path = os.path.relpath(os.path.dirname(f), root).replace(os.sep, "/")
+        d = yaml.safe_load(open(f, encoding="utf-8")) or {}
         if "filters" in d:  # filtered OWNERS: the ".*" filter applies to every file
             d = {**d, **(d["filters"].get(".*") or {})}
         did = dir_id("kubernetes", path)
@@ -137,7 +138,7 @@ def load_owners(g):
     for x in dirs:
         p = x["path"]
         while p not in (".", ""):
-            p = os.path.dirname(p) or "."
+            p = posixpath.dirname(p) or "."
             if p in have:
                 parents.append({"child": x["id"], "parent": dir_id("kubernetes", p)})
                 break
@@ -177,7 +178,7 @@ def load_keps(g):
         try:
             # BaseLoader keeps every value as a string: some KEPs contain invalid dates
             # (e.g. month 13) that would crash a normal YAML loader.
-            k = yaml.load(open(f), Loader=yaml.BaseLoader) or {}
+            k = yaml.load(open(f, encoding="utf-8"), Loader=yaml.BaseLoader) or {}
         except yaml.YAMLError:
             continue
         num = k.get("kep-number")
@@ -189,7 +190,7 @@ def load_keps(g):
             "stage": str(k.get("stage", "")), "created": str(k.get("creation-date", "")),
             "updated": str(k.get("last-updated", "")), "latest": str(k.get("latest-milestone", "")),
             "url": "https://github.com/kubernetes/enhancements/tree/master/"
-                   + os.path.relpath(os.path.dirname(f), os.path.join(DATA, "enh")),
+                   + os.path.relpath(os.path.dirname(f), os.path.join(DATA, "enh")).replace(os.sep, "/"),
         })
         if k.get("owning-sig"):
             sigs.append({"kep": num, "sig": k["owning-sig"], "rel": "OWNED_BY"})
