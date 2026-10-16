@@ -1,0 +1,92 @@
+{
+  "snapshot": "2025-10-16",
+  "activity_window": [
+    "2024-10-16",
+    "2025-10-16"
+  ],
+  "scope": "merged PRs in kubernetes/kubernetes only; activity in other repos is not counted",
+  "silent_owners": {
+    "approvers_then": 152,
+    "silent_then": 49,
+    "silent_share": 0.322,
+    "lost_a_listing_by_now": 26,
+    "base_rate": 0.171,
+    "silent_who_lost_a_listing": 11,
+    "precision": 0.224,
+    "lift": 1.31,
+    "silent_still_listed_now": 44
+  },
+  "shadow_owners": {
+    "active_non_owners_then": 382,
+    "base_rate": 0.0314,
+    "top_k": [
+      {
+        "k": 10,
+        "became_owners": 1,
+        "precision": 0.1,
+        "lift": 3.2,
+        "who": [
+          "nojnhuh"
+        ]
+      },
+      {
+        "k": 20,
+        "became_owners": 3,
+        "precision": 0.15,
+        "lift": 4.8,
+        "who": [
+          "nojnhuh",
+          "ania-borowiec",
+          "ndixita"
+        ]
+      },
+      {
+        "k": 30,
+        "became_owners": 5,
+        "precision": 0.167,
+        "lift": 5.3,
+        "who": [
+          "nojnhuh",
+          "ania-borowiec",
+          "ndixita",
+          "zylxjtu",
+          "michaelasp"
+        ]
+      },
+      {
+        "k": 50,
+        "became_owners": 7,
+        "precision": 0.14,
+        "lift": 4.5,
+        "who": [
+          "nojnhuh",
+          "ania-borowiec",
+          "ndixita",
+          "zylxjtu",
+          "michaelasp",
+          "upodroid",
+          "elmiko"
+        ]
+      },
+      {
+        "k": 100,
+        "became_owners": 11,
+        "precision": 0.11,
+        "lift": 3.5,
+        "who": [
+          "nojnhuh",
+          "ania-borowiec",
+          "ndixita",
+          "zylxjtu",
+          "michaelasp",
+          "upodroid",
+          "elmiko",
+          "harche",
+          "nmn3m",
+          "tosi3k",
+          "pravk03"
+        ]
+      }
+    ]
+  }
+}

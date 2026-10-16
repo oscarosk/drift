@@ -17,7 +17,7 @@ import re
 
 import yaml
 
-from orggraph.db import graph
+from orggraph.db import graph, GRAPH_NAME
 
 DATA = os.path.join(os.path.dirname(__file__), "..", "data")
 BATCH = 500
@@ -95,8 +95,8 @@ ROLES = {  # OWNERS key -> relationship type
 }
 
 
-def load_owners(g):
-    root = os.path.join(DATA, "k8s")
+def load_owners(g, root=None):
+    root = root or os.path.join(DATA, "k8s")
     aliases = yaml.safe_load(open(os.path.join(root, "OWNERS_ALIASES"), encoding="utf-8"))["aliases"]
 
     def expand(names):
@@ -262,10 +262,16 @@ def create_indexes(g):
 
 
 def main():
-    g = graph()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--graph", default=GRAPH_NAME, help="graph name (one per org / snapshot)")
+    ap.add_argument("--owners", default=os.path.join(DATA, "k8s"),
+                    help="folder with OWNERS files, e.g. data/k8s_2025 for the year-ago snapshot")
+    a = ap.parse_args()
+    g = graph(a.graph)
     create_indexes(g)
     load_sigs(g)
-    load_owners(g)
+    load_owners(g, a.owners)
     load_keps(g)
     for label in ["Person", "SIG", "Subproject", "Dir", "KEP", "FeatureGate", "Component", "Release"]:
         n = g.ro_query(f"MATCH (n:{label}) RETURN count(n)").result_set[0][0]
