@@ -20,5 +20,6 @@ def graph(name: str = GRAPH_NAME):
         port=int(os.getenv("FALKORDB_PORT", "6379")),
         username=os.getenv("FALKORDB_USERNAME") or None,
         password=os.getenv("FALKORDB_PASSWORD") or None,
+        **({"ssl": True} if os.getenv("FALKORDB_SSL", "").lower() in ("1", "true", "yes") else {}),
     )
     return db.select_graph(name)
