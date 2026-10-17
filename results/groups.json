@@ -580,34 +580,11 @@
  "check": {
   "groups_built_from": "activity before 2026-07-16",
   "prs_from": "2026-07-16",
-  "multi_area_prs_by_groups_crossed": {
-   "1": {
-    "prs": 52,
-    "needed_2plus_approvers": 6,
-    "rate": 0.115
-   },
-   "2": {
-    "prs": 67,
-    "needed_2plus_approvers": 11,
-    "rate": 0.164
-   },
-   "3+": {
-    "prs": 47,
-    "needed_2plus_approvers": 16,
-    "rate": 0.34
-   }
-  },
-  "two_area_prs": {
-   "same_group": {
-    "prs": 39,
-    "needed_2plus_approvers": 5,
-    "rate": 0.128
-   },
-   "different_groups": {
-    "prs": 27,
-    "needed_2plus_approvers": 3,
-    "rate": 0.111
-   }
-  }
+  "prs": 273,
+  "same_group_share": 0.472,
+  "chance_mean": 0.147,
+  "chance_max": 0.187,
+  "shuffles": 200,
+  "lift": 3.2
  }
 }
