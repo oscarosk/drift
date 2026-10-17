@@ -15,11 +15,13 @@ Run:  uvicorn orggraph.api:app --port 8000      (then open http://localhost:8000
 """
 from __future__ import annotations
 
+import collections
 import json
 import os
 import threading
+import time
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
@@ -33,6 +35,47 @@ _agents: dict[str, Agent] = {}
 _tools: Tools | None = None
 _cache: dict = {}
 _lock = threading.Lock()
+
+# ---- limits for a public deployment ------------------------------------------------------
+PER_MINUTE = int(os.getenv("DRIFT_PER_MINUTE", "20"))     # requests per visitor per minute on the busy endpoints
+LLM_PER_DAY = int(os.getenv("DRIFT_LLM_PER_DAY", "300"))  # model calls per day; after that the offline router answers
+_hits: dict[str, collections.deque] = {}
+_llm_day = {"day": "", "n": 0}
+
+
+def limited(request: Request) -> JSONResponse | None:
+    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "?")).split(",")[0].strip()
+    now = time.time()
+    with _lock:
+        if len(_hits) > 5000:
+            _hits.clear()
+        q = _hits.setdefault(ip, collections.deque())
+        while q and now - q[0] > 60:
+            q.popleft()
+        if len(q) >= PER_MINUTE:
+            return JSONResponse({"error": "Too many requests: wait a minute and try again."}, status_code=429)
+        q.append(now)
+    return None
+
+
+def llm_allowed() -> bool:
+    today = time.strftime("%Y-%m-%d")
+    with _lock:
+        if _llm_day["day"] != today:
+            _llm_day.update(day=today, n=0)
+        _llm_day["n"] += 1
+        return _llm_day["n"] <= LLM_PER_DAY
+
+
+@app.on_event("startup")
+def warm():
+    """Fill the caches in the background so the first visitor doesn't wait for them."""
+    def run():
+        try:
+            areas(); cleanup(); summary()
+        except Exception as e:  # the app still works; the page will compute on demand
+            print("warm-up failed:", e)
+    threading.Thread(target=run, daemon=True).start()
 
 
 def tools() -> Tools:
@@ -85,7 +128,9 @@ def health():
 
 
 @app.post("/api/ask")
-def ask(body: Ask):
+def ask(body: Ask, request: Request):
+    if (r := limited(request)):
+        return r
     q = body.question.strip()[:500]
     if not q:
         return JSONResponse({"error": "Type a question first."}, status_code=400)
@@ -93,11 +138,15 @@ def ask(body: Ask):
     if key not in _agents and len(_agents) > 500:
         _agents.clear()
     agent = _agents.setdefault(key, Agent(session=key))
+    if agent.key:
+        agent.use_llm = llm_allowed()
     return agent.ask(q)
 
 
 @app.post("/api/reviewers")
-def reviewers(body: Reviewers):
+def reviewers(body: Reviewers, request: Request):
+    if (r := limited(request)):
+        return r
     if not (body.paths or body.pr):
         return JSONResponse({"error": "Paste file paths or a PR number."}, status_code=400)
     return _pack(tools().suggest_reviewers(paths=(body.paths or "")[:5000], pr=body.pr))
@@ -109,7 +158,9 @@ def areas():
 
 
 @app.get("/api/dir")
-def directory(path: str):
+def directory(path: str, request: Request):
+    if (r := limited(request)):
+        return r
     t = tools()
     owns = t.who_owns(path)
     if owns.outcome != "answered_with_path":
@@ -125,7 +176,9 @@ def cleanup():
 
 
 @app.post("/api/patch")
-def patch(body: Patch):
+def patch(body: Patch, request: Request):
+    if (r := limited(request)):
+        return r
     out = tools().owners_patch([d for d in body.dirs if isinstance(d, str)][:60])
     if not out.data.get("patch"):
         return JSONResponse({"error": out.note, "skipped": out.data.get("skipped", [])}, status_code=422)

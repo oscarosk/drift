@@ -23,7 +23,7 @@ class Memory:
         self.g = graph(graph_name) if graph_name else graph()
 
     def remember(self, answer, text: str, session: str) -> int:
-        """Store one finding per directory / person / KEP the answer was about. Returns count."""
+        """Store one finding per directory / person / KEP the answer was about (skipping exact repeats). Returns count."""
         d = answer.data or {}
         targets = []
         if d.get("dir"):
@@ -37,6 +37,8 @@ class Memory:
             extra = " AND x.repo = 'kubernetes'" if label == "Dir" else ""
             res = self.g.query(f"""
                 MATCH (x:{label}) WHERE x.{prop} = $v{extra}
+                OPTIONAL MATCH (old:Finding {{text: $text}})-[:ABOUT]->(x)
+                WITH x WHERE old IS NULL
                 CREATE (f:Finding {{text: $text, tool: $tool, args: $args, at: $at, as_of: $as_of, session: $session}})
                 CREATE (f)-[:ABOUT]->(x)
                 RETURN count(f)""", {

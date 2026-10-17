@@ -50,14 +50,13 @@ Numbers below are produced by `python -m orggraph.backtest` and stored in
 - **The records did not notice.** A year later, 44 of those 49 were still listed as approvers.
 - **The people doing the work show up early.** Ranking non-owners by review activity on
   2025-10-16, the top 30 became reviewers or approvers within a year at **5.3× the base rate**.
-- **The real teams don't follow the SIG labels.** Label propagation on who-works-where finds about
-  20 working groups over ~200 areas; most of them mix areas labelled with different SIGs. For example,
-  dynamic resource allocation joins `pkg/kubelet/cm/dra` (SIG Node) with `pkg/apis/resource` and its
-  e2e tests. The groups predict the future: built from activity before 2026-07-16, they put **half**
-  of the area pairs changed together in later PRs in the same group, against **10%** by chance (the
-  highest of 200 shuffles: 15%). See [`results/groups.json`](results/groups.json).
-  We also tested whether crossing groups means a PR needs more approvers. One download of the data
-  said 3×, another said no difference, so we don't claim it.
+- **The real teams don't follow the SIG labels.** Label propagation on who-works-where finds 19
+  working groups over 206 areas; 13 of them mix areas labelled with different SIGs (the scheduler's
+  group spans areas labelled Scheduling, Node and Instrumentation). The groups predict the future:
+  built from activity before 2026-07-16, they put **47%** of the area pairs changed together in later
+  PRs in the same group, against **15%** by chance (the highest of 200 shuffles: 19%). See
+  [`results/groups.json`](results/groups.json). We also tested whether crossing groups means a PR
+  needs more approvers. One download of the data said 3×, another said no difference, so we don't claim it.
 
 Scope note: activity covers merged PRs in kubernetes/kubernetes only. Someone "silent" here may be
 active in other Kubernetes repositories, or in work that leaves no PR trail. Drift reports what the
@@ -91,6 +90,16 @@ router and templates do, so everything works offline.
 ```json
 {"mcpServers": {"drift": {"command": "python", "args": ["-m", "orggraph.mcp_server"], "cwd": "/path/to/drift"}}}
 ```
+
+## Deploy (FalkorDB Cloud + Render)
+
+1. Create a FalkorDB Cloud instance. Put its host, port, username and password in your local `.env`
+   and run `python scripts/build.py --no-fetch`: that loads both graphs into the cloud instance.
+2. On Render: **New → Blueprint**, pick this repository. `render.yaml` defines the web service; enter
+   the same FalkorDB values (and optionally `OPENAI_API_KEY`) when Render asks for them.
+3. Public limits are built in: 20 requests per visitor per minute on the busy endpoints, and at most
+   `DRIFT_LLM_PER_DAY` model calls a day (after that the keyword router answers). Drift only reads
+   Kubernetes data; the only thing visitors write is the agent's memory of its own checked answers.
 
 ## Using the app
 
