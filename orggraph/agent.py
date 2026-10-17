@@ -103,6 +103,7 @@ class Agent:
                 detail = r.json().get("error", {}).get("message", "")
             except ValueError:
                 detail = r.text
+            detail = re.sub(r"sk-[A-Za-z0-9*_-]+", "[key]", detail)       # never echo any part of the key
             err = f"OpenAI {r.status_code}: {detail[:200]}"
             print("model call failed:", err, flush=True)   # shows in the server log (e.g. Render)
             raise RuntimeError(err)
