@@ -8,8 +8,8 @@ Working groups: which areas are really worked on by the same people, whatever th
 2. Community detection. FalkorDB's algo.labelPropagation runs on that projection; each directory
    gets d.group. Groups of one are dropped.
 3. Check. We rebuild the groups from activity before 2026-07-16 only, then look at PRs merged after
-   it: does a PR that crosses groups need more than one approver more often than one that stays
-   inside a group? If the groups were arbitrary, it wouldn't.
+   it that touch 2-5 grouped areas: how often are two areas changed together in the same group?
+   Compared with 200 shuffles that keep each area's PR count but ignore the groups.
 
     python -m orggraph.groups            # build groups for the app + run the check
 Writes d.group / d.group_name on Dir nodes and results/groups.json.
@@ -21,7 +21,9 @@ import collections
 import datetime as dt
 import json
 import math
+import itertools
 import os
+import random
 
 from orggraph.db import graph
 
@@ -78,30 +80,30 @@ def build(g, start: str, end: str) -> dict:
     return {p: cid for cid, ps in members.items() if len(ps) > 1 for p in ps}
 
 
-def check(g, groups: dict) -> dict:
-    """PRs merged on/after CHECK_FROM: share needing 2+ approvers, by how many groups they cross."""
+def check(g, groups: dict, shuffles: int = 200) -> dict:
+    """Later PRs touching 2-5 grouped areas: share of area pairs in the same group, vs shuffles."""
     rows = g.ro_query("""
         MATCH (pr:PR)-[:TOUCHES]->(d:Dir) WHERE pr.day >= $c
-        WITH pr, collect(DISTINCT d.path) AS dirs
-        MATCH (a:Person)-[:APPROVED_PR]->(pr)
-        RETURN pr.number, dirs, count(DISTINCT a)""", {"c": day(CHECK_FROM)}, timeout=120000).result_set
-    by = collections.defaultdict(lambda: [0, 0])
-    two_dirs = {"same_group": [0, 0], "different_groups": [0, 0]}
-    for _, dirs, approvers in rows:
-        if len(dirs) < 2 or not all(d in groups for d in dirs):
-            continue
-        n = len({groups[d] for d in dirs})
-        b = by["1" if n == 1 else "2" if n == 2 else "3+"]
-        b[0] += 1
-        b[1] += approvers >= 2
-        if len(dirs) == 2:
-            t = two_dirs["same_group" if n == 1 else "different_groups"]
-            t[0] += 1
-            t[1] += approvers >= 2
-    fmt = lambda v: {"prs": v[0], "needed_2plus_approvers": v[1], "rate": round(v[1] / v[0], 3) if v[0] else None}
+        WITH pr, collect(DISTINCT d.path) AS dirs WHERE size(dirs) >= 2
+        RETURN pr.number, dirs ORDER BY pr.number""", {"c": day(CHECK_FROM)}, timeout=120000).result_set
+    prs = [sorted(d for d in dirs if d in groups) for _, dirs in rows]
+    prs = [p for p in prs if 2 <= len(p) <= 5]
+
+    def same_share(sets):
+        total = 0.0
+        for p in sets:
+            pairs = list(itertools.combinations(p, 2))
+            total += sum(groups[a] == groups[b] for a, b in pairs) / len(pairs)
+        return total / len(sets) if sets else 0.0
+
+    observed = same_share(prs)
+    pool = [d for p in prs for d in p]          # every area as often as it was changed
+    rnd = random.Random(7)
+    chance = [same_share([rnd.sample(pool, len(p)) for p in prs]) for _ in range(shuffles)]
     return {"groups_built_from": f"activity before {CHECK_FROM}", "prs_from": CHECK_FROM,
-            "multi_area_prs_by_groups_crossed": {k: fmt(by[k]) for k in ("1", "2", "3+")},
-            "two_area_prs": {k: fmt(v) for k, v in two_dirs.items()}}
+            "prs": len(prs), "same_group_share": round(observed, 3),
+            "chance_mean": round(sum(chance) / len(chance), 3), "chance_max": round(max(chance), 3),
+            "shuffles": shuffles, "lift": round(observed / (sum(chance) / len(chance)), 1)}
 
 
 def describe(g, groups: dict, start: str) -> list[dict]:
@@ -163,13 +165,10 @@ def main():
     print(f"{len(described)} working groups over {len(groups)} directories; {len(cross)} span more than one SIG label")
     for x in described[:8]:
         print(f"  {x['name']:55} {len(x['dirs']):3} areas  SIGs: {', '.join(x['sigs'][:3]) or '-'}")
-    print("\ncheck (groups from activity before %s, PRs after it): needed a 2nd approver" % CHECK_FROM)
-    for k, v in result["multi_area_prs_by_groups_crossed"].items():
-        if v["prs"]:
-            print(f"  crosses {k:2} group(s): {v['needed_2plus_approvers']:3}/{v['prs']:<3} = {v['rate']:.0%}")
-    for k, v in result["two_area_prs"].items():
-        if v["prs"]:
-            print(f"  2-area PRs, {k:16}: {v['needed_2plus_approvers']:3}/{v['prs']:<3} = {v['rate']:.0%}")
+    c = result
+    print(f"\ncheck: {c['prs']} PRs merged after {CHECK_FROM} touching 2-5 grouped areas (groups built from earlier activity)")
+    print(f"  areas changed together are in the same group {c['same_group_share']:.0%} of the time; "
+          f"chance {c['chance_mean']:.0%} (max of {c['shuffles']} shuffles {c['chance_max']:.0%}), {c['lift']}x")
     print("->", path)
 
 

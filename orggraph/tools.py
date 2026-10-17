@@ -416,8 +416,8 @@ class Tools:
                      "RETURN DISTINCT x.group_name", {"d": dirs[:15]})
         groups = sorted(r[0] for r in grp if r[0])
         if len(groups) > 1:
-            notes.append(f"This change crosses {len(groups)} working groups ({', '.join(groups)}): "
-                         "changes like this need a second approver about three times as often, so look for one from each.")
+            notes.append(f"This change crosses {len(groups)} working groups ({', '.join(groups)}), "
+                         "each with its own regular reviewers: make sure someone from each looks at it.")
         return self._answer("answered_with_path", "suggest_reviewers", args,
                             data={"since": since, "people": ranked, "areas": areas, "groups": groups},
                             paths=[[f"@{e['handle']}", f"reviewed PR #{e['example_prs'][0]}", e["areas"][0]] for e in ranked[:3] if e["example_prs"]],
