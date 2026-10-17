@@ -67,6 +67,22 @@ def llm_allowed() -> bool:
         return _llm_day["n"] <= LLM_PER_DAY
 
 
+_model = {"status": "not configured"}
+
+
+def check_model():
+    """One tiny call so /api/health (and the server log) say whether the model is usable."""
+    a = Agent(session="health")
+    if not a.key:
+        return
+    try:
+        a._chat([{"role": "user", "content": "Reply with: ok"}])
+        _model["status"] = f"ok ({a.model})"
+    except Exception as e:
+        _model["status"] = f"unavailable: {e}"[:220]
+    print("model check:", _model["status"], flush=True)
+
+
 @app.on_event("startup")
 def warm():
     """Fill the caches in the background so the first visitor doesn't wait for them."""
@@ -74,7 +90,11 @@ def warm():
         try:
             areas(); cleanup(); summary()
         except Exception as e:  # the app still works; the page will compute on demand
-            print("warm-up failed:", e)
+            print("warm-up failed:", e, flush=True)
+        try:
+            check_model()
+        except Exception as e:
+            print("model check failed:", e, flush=True)
     threading.Thread(target=run, daemon=True).start()
 
 
@@ -122,7 +142,7 @@ def index():
 @app.get("/api/health")
 def health():
     try:
-        return {"ok": True, "as_of": tools().as_of}
+        return {"ok": True, "as_of": tools().as_of, "model": _model["status"]}
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=503)
 

@@ -107,12 +107,13 @@ router and templates do, so everything works offline.
 
 | Screen | For | What it does |
 |---|---|---|
-| **Find a reviewer** | Contributors, every PR | Paste the files a change touches (or a merged PR number): the people who actually review that code now, with recent PRs as evidence, plus which listed owners have gone quiet. |
-| **Areas** | Anyone new to a part of the code | Every OWNERS directory, searchable, marked drifting / healthy / inherits; each opens a view of *what OWNERS says* next to *who actually does the work*. |
-| **Cleanup queue** | Maintainers, monthly | Drafted OWNERS fixes for the most drifted directories. Tick the ones you agree with and download one patch: `git apply drift-owners.patch`. Edits keep comments and formatting, are re-parsed and checked before export, and files using `filters:` are left for humans. |
-| **How we know** | Skeptics | The year-later backtest, its method and its limits. |
+| **Overview** | First visit | The headline drift figure, a live drafted OWNERS change with its evidence, and the areas that drifted most (one dot per approver, hollow if silent). |
+| **Find a reviewer** | Contributors, every PR | Paste the files a change touches (or a merged PR number): who to ask first and why, as a path through the graph, the next best people, and which listed owners have gone quiet. |
+| **Areas** | Anyone new to a part of the code | Every OWNERS directory, searchable. Each opens *what the OWNERS file says* next to *who actually does the work*, the drafted fix, and a map of the areas that share its people (its working group). |
+| **Fix the records** | Maintainers, monthly | Drafted OWNERS fixes for the most drifted directories. Tick the ones you agree with and download one patch: `git apply drift-owners.patch`. Edits keep comments and formatting, are re-parsed and checked before export, and files using `filters:` are left for humans. |
+| **How we know** | Skeptics | The three tests (reviewer accuracy, the year-later backtest, the working-group check), their method and the claims we dropped. |
 
-Ask anything from the top bar; answers open beside the page with their graph path and query trace.
+Ask anything from the top bar; answers open beside the page with their graph path, and the queries behind them under *How this was answered*.
 The data refreshes by re-running `fetch_reviews` and `build.py` (both incremental-friendly), e.g. weekly.
 
 ## How the agent works
@@ -140,7 +141,7 @@ The data refreshes by re-running `fetch_reviews` and `build.py` (both incrementa
 | `propose_owners_update(path)` | A drafted OWNERS change with evidence for every line (never applied) |
 | `suggest_reviewers(paths or pr)` | Who should review a concrete change, across every area it touches; flags when it crosses working groups |
 | `working_group(path)` | Areas worked on by the same people (FalkorDB label propagation), their SIG labels and core people |
-| `owners_patch(dirs)` | A `git apply`-able patch for drafted fixes (MCP and the Cleanup queue) |
+| `owners_patch(dirs)` | A `git apply`-able patch for drafted fixes (MCP and Fix the records) |
 
 ## Data sources
 
