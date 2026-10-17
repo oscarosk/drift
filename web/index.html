@@ -262,6 +262,10 @@ details.how td { padding: 2px 16px 2px 0; font: 12.5px var(--mono); }
 .results .vsn { font: 600 18px var(--head); font-stretch: 85%; color: var(--muted); margin-top: 6px; }
 .results p { margin: 10px 0 0; font-size: 15px; }
 .results h3 { font-size: 17px; font-weight: 700; margin-top: 14px; }
+.results.two { grid-template-columns: 1fr 1fr; }
+.results.minor { margin-top: 10px; }
+.results.minor .big { font-size: 30px; }
+.results.minor h3 { font-size: 16px; }
 table.t caption { text-align: left; color: var(--muted); font-size: 14px; padding-bottom: 8px; }
 .results details { margin-top: 12px; font-size: 14px; }
 .results details summary { cursor: pointer; color: var(--muted); }
@@ -297,7 +301,7 @@ footer p { margin: 0; max-width: 90ch; }
   .check { grid-template-columns: repeat(3, auto); } .check .side { grid-column: 1 / -1; justify-self: start; text-align: left; margin-top: 10px; }
   .chainlist li { grid-template-columns: 1fr; }
   .hero, .rev, .vs, .groupmap { grid-template-columns: minmax(0, 1fr); gap: 28px; }
-  .doors, .results { grid-template-columns: 1fr; }
+  .doors, .results, .results.two { grid-template-columns: 1fr; }
   .door + .door, .results > div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--rule); }
   .drifted { columns: 1; }
   .ln { grid-template-columns: 20px minmax(0, 1fr); }
@@ -807,8 +811,8 @@ async function viewProof() {
     ["What's weak", bt ? `Predicting which silent approvers get removed beats chance by only ${bt.silent_owners.lift}×, because Kubernetes rarely cleans up its OWNERS files. That gap is the problem Drift exists to close.` : ""],
   ].filter(([, t]) => t);
   v.innerHTML = `<h1 style="font-size:34px;font-weight:750;font-stretch:80%">How we know it works</h1>
-    <p class="lede">Three tests on real Kubernetes history. In each, Drift only sees data from before the moment it's tested on. Every number is produced by a script in the repository.</p>
-    <div class="results">
+    <p class="lede">Two results matter: Drift finds the right reviewer about twice as often as the OWNERS files, and its fixes are checked before anyone applies them. Every number is produced by a script in the repository, using only data from before the moment it's tested on.</p>
+    <div class="results two">
       ${ev ? `<div><h3>Find a reviewer</h3><div class="big">${pct(ev.approver["drift@3"].rate)}</div><div class="vsn">vs ${pct(ev.approver["owners@3_random"].rate)} from the OWNERS files</div>
         <p>On ${ev.sampled} PRs merged ${day(ev.test_window[0])} to ${day(ev.test_window[1])}, the person who actually approved was in Drift's top 3.</p>
         <details><summary>See the numbers</summary><table class="t"><thead><tr><th>Method</th><th class="n">First</th><th class="n">Top 3</th></tr></thead><tbody>
@@ -816,6 +820,11 @@ async function viewProof() {
           <tr><td>OWNERS files</td><td class="n">${pct(ev.approver["owners@1_random"].rate)}</td><td class="n">${pct(ev.approver["owners@3_random"].rate)}</td></tr>
           <tr><td>Busiest approvers</td><td class="n">n/a</td><td class="n">${pct(ev.approver["popular@3"].rate)}</td></tr></tbody></table>
           <p class="tiny">${ev.sampled} PRs sampled from ${ev.prs_in_window_with_an_approver}; author excluded; 95% CI for Drift's top 3: ${Math.round(ev.approver["drift@3"].ci95[0] * 100)}–${Math.round(ev.approver["drift@3"].ci95[1] * 100)}%.</p></details></div>` : ""}
+      <div id="proof-fix"><h3>Fix the records</h3><div class="big">…</div><div class="vsn">Checking the drafted fixes on a copy of the graph</div></div>
+    </div>
+    <section class="sec"><h2>Other checks</h2>
+      <p class="sub">Supporting results. Each is tested the same way, on data from before the moment it predicts.</p>
+    <div class="results two minor">
       ${t30 ? `<div><h3>Spotting future owners</h3><div class="big">${t30.lift}×</div><div class="vsn">the base rate</div>
         <p>The ${t30.k} busiest unlisted reviewers on ${day(bt.snapshot)} became owners within a year at ${t30.lift}× the rate of everyone else.</p>
         <details><summary>See the numbers</summary><table class="t"><tbody>
@@ -830,11 +839,24 @@ async function viewProof() {
           <tr><td>Groups mixing SIG labels</td><td class="n">${gr.cross_sig_groups}</td></tr>
           <tr><td>Best of ${gr.check.shuffles} random shuffles</td><td class="n">${pct(gr.check.chance_max)}</td></tr></tbody></table>
           <p class="tiny">Groups built from activity before ${day(gr.check.prs_from)}; tested on later PRs touching two to five grouped areas.</p></details></div>` : ""}
-    </div>
+    </div></section>
     <section class="sec"><h2>The graph behind it</h2>
       <p class="sub">One FalkorDB graph per organisation. Plum is what the records say, teal is what people actually do; every answer in Drift is a walk across these relationships.</p>
       <div class="scroll" style="overflow-x:auto"><img src="/model.svg" alt="Drift's graph: Person, PR, Dir, SIG, KEP and the agent's memory (Finding), with the record relationships in plum and the work relationships in teal" style="width:100%;min-width:640px;max-width:1000px;border:1px solid var(--rule);border-radius:10px;display:block"></div></section>
     <section class="fine"><h2>The fine print</h2>${fine.map(([h, t]) => `<details><summary>${h}</summary><p>${t}</p></details>`).join("")}</section>`;
+  try {
+    const q = await queue(), r = await post("/api/checkfix", { dirs: q.queue.map((x) => x.dir) }), box = $("#proof-fix");
+    if (!box) return;
+    if (r.outcome !== "answered_with_path") { box.remove(); return; }
+    const d = r.data;
+    box.innerHTML = `<h3>Fix the records</h3><div class="big">${d.fixed.length} unstuck</div><div class="vsn">${d.stuck.length ? d.stuck.length + " made stuck" : "none made stuck"}</div>
+      <p>Drift's ${q.queue.length} drafted OWNERS fixes were applied to a copy of the graph (<code>GRAPH.COPY</code>) and ownership routing was re-run on both. ${d.fixed.length} areas whose approval requests only reached silent approvers get unstuck.</p>
+      <details><summary>See the numbers</summary><table class="t"><tbody>
+        <tr><td>Changes applied to the copy</td><td class="n">${d.changes}</td></tr>
+        <tr><td>Areas waiting only on silent approvers</td><td class="n">${d.stuck_before} → ${d.stuck_after}</td></tr>
+        <tr><td>Areas made stuck</td><td class="n">${d.stuck.length}</td></tr></tbody></table>
+        <p class="tiny">The copy is deleted afterwards; the real graph is never edited. <a href="#/fix">See the fixes</a>.</p></details>`;
+  } catch (err) { const box = $("#proof-fix"); if (box) box.remove(); }
 }
 
 // ---- ask drawer --------------------------------------------------------------------------
