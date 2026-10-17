@@ -14,6 +14,16 @@ if os.path.exists(_env):
 GRAPH_NAME = os.getenv("ORGGRAPH_GRAPH", "kubernetes")  # one graph per organisation (tenant)
 
 
+def client() -> FalkorDB:
+    return FalkorDB(
+        host=os.getenv("FALKORDB_HOST", "localhost"),
+        port=int(os.getenv("FALKORDB_PORT", "6379")),
+        username=os.getenv("FALKORDB_USERNAME") or None,
+        password=os.getenv("FALKORDB_PASSWORD") or None,
+        **({"ssl": True} if os.getenv("FALKORDB_SSL", "").lower() in ("1", "true", "yes") else {}),
+    )
+
+
 def graph(name: str = GRAPH_NAME):
     db = FalkorDB(
         host=os.getenv("FALKORDB_HOST", "localhost"),
