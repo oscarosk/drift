@@ -82,13 +82,8 @@ def test_what_if_never_changes_the_live_graph_and_deletes_its_copy(real):
     assert _approver_edges(real) == before
     assert any(x["query"].startswith("GRAPH.COPY") for x in a.trace)
     assert any(x["query"].startswith("GRAPH.DELETE") for x in a.trace)
-    import redis
-    from orggraph import db  # noqa: F401  (loads .env)
-    import os
-    r = redis.Redis(host=os.getenv("FALKORDB_HOST", "localhost"), port=int(os.getenv("FALKORDB_PORT", "6379")),
-                    username=os.getenv("FALKORDB_USERNAME") or None, password=os.getenv("FALKORDB_PASSWORD") or None)
-    assert not [k for k in r.keys("whatif_*")]
-
+    from orggraph.db import client
+    assert not [g for g in client().list_graphs() if str(g).startswith("whatif_")]   # GRAPH.LIST
 
 def test_unknown_people_run_no_copy(real):
     a = real.what_if(["@definitely-not-a-real-handle-zz"])
