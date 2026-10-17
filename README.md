@@ -27,7 +27,7 @@ reviewers using **only activity from before that PR**, and we checked against wh
 
 | Method | Right person first | Right person in top 3 |
 |---|---|---|
-| **Drift** (Find a reviewer) | **52%** | **78%** (95% CI 74–82%) |
+| **Drift** (Find a reviewer) | **53%** | **78%** (95% CI 74–82%) |
 | Pick from the OWNERS files (what the records say) | 13% | 37% |
 | Ask the busiest approvers | n/a | 46% |
 
