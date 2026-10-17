@@ -848,6 +848,12 @@ function wireDrawer() {
   $("#drawer-body").querySelectorAll("a[href^='#/']").forEach((a) => a.addEventListener("click", closeDrawer));
   $("#drawer-body").querySelectorAll("[data-ex]").forEach((b) => b.onclick = () => { $("#q").value = b.textContent; ask(b.textContent); });
 }
+function howLine(r) {
+  if (!r.tool) return "";
+  const picked = r.picked_by && r.picked_by.startsWith("model") ? `chosen by ${esc(r.picked_by)}` : "chosen by keyword matching";
+  const wrote = (r.written_by || "").startsWith("model") ? "sentence written by the model and checked against the graph" : "sentence built from the graph result";
+  return `<p>Tool <code>${esc(r.tool)}</code>, ${picked}; ${wrote}.</p>`;
+}
 async function ask(q) {
   if (!q) { openDrawer(`<p class="q">Ask about a directory, a person's area or a decision (KEP). For example:</p>${examplesHtml()}`); wireDrawer(); return; }
   openDrawer(`<p class="q">${esc(q)}</p><p class="empty">Walking the graph…</p>`);
@@ -861,10 +867,9 @@ async function ask(q) {
         ? `<p class="memory">Drift answered this on ${day(m.learned_at)}. Since then the answer ${changeLine(m)}.</p>`
         : `<p class="memory">Earlier answer, ${day(m.learned_at)}: ${linkify(m.text)}</p>`).join("")
       : same.length ? `<p class="memory">Drift answered this on ${day(same[0].learned_at)} too, and the graph still says the same.</p>` : "";
-    const picked = r.picked_by && r.picked_by.startsWith("model") ? `chosen by ${esc(r.picked_by)}` : "chosen by keyword matching";
-    const wrote = (r.written_by || "").startsWith("model") ? "sentence written by the model and checked against the graph" : "sentence built from the graph result";
+
     if (r.tool === "what_if" && r.outcome === "answered_with_path") {
-      $("#drawer-body").innerHTML = `<p class="q">${esc(q)}</p>${whatIfHtml(r)}<hr><p class="tiny">Try another</p>${examplesHtml(q)}`;
+      $("#drawer-body").innerHTML = `<p class="q">${esc(q)}</p>${whatIfHtml(r, { noHow: true })}${how(r, howLine(r))}<hr><p class="tiny">Try another</p>${examplesHtml(q)}`;
       wireDrawer(); return;
     }
     $("#drawer-body").innerHTML = `<p class="q">${esc(q)}</p><p class="a">${linkify(r.text)}</p>
@@ -872,7 +877,7 @@ async function ask(q) {
       ${(r.paths || []).length ? `<div style="margin-top:16px">${trailFromPath(r.paths[0])}</div>` : ""}
       ${r.data && r.data.dir && r.outcome === "answered_with_path" ? `<p><a class="btn quiet" href="#/area/${encodeURIComponent(r.data.dir)}">Open ${esc(r.data.dir)}</a></p>` : ""}
       ${memHtml}
-      ${how(r, r.tool ? `<p>Tool <code>${esc(r.tool)}</code>, ${picked}; ${wrote}.</p>` : "")}
+      ${how(r, howLine(r))}
       <hr><p class="tiny">Try another</p>${examplesHtml(q)}`;
     wireDrawer();
   } catch (err) { $("#drawer-body").innerHTML = `<p class="q">${esc(q)}</p><p>${esc(err.message)}</p>${examplesHtml(q)}`; wireDrawer(); }

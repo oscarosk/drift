@@ -60,3 +60,19 @@ def test_working_group_contains_the_area(t):
     assert a.outcome == "answered_with_path"
     assert "pkg/kubelet/cm/dra" in [x["dir"] for x in a.data["areas"]]
     assert all(set(l["people"]) for l in a.data["links"])
+
+
+SAMPLES = {"who_owns": {"path": "pkg/kubelet"}, "who_knows": {"path": "pkg/kubelet/cm/cpumanager"},
+           "drift_summary": {}, "route": {"path": "pkg/scheduler"}, "why": {"kep": 2340},
+           "propose_owners_update": {"path": "pkg/kubelet/cm/cpumanager"}, "what_if": {"handles": "@deads2k"},
+           "working_group": {"path": "pkg/scheduler"}, "suggest_reviewers": {"paths": "pkg/kubelet/kubelet.go"}}
+
+
+def test_every_agent_tool_template_passes_the_checker(t):
+    from orggraph.render import check, template
+    from orggraph.tools import CATALOGUE
+    assert set(SAMPLES) == set(CATALOGUE)
+    for name, args in SAMPLES.items():
+        a = getattr(t, CATALOGUE[name]["fn"])(**args)
+        ok, why = check(template(a), a)
+        assert ok, f"{name}: {why}"
