@@ -8,6 +8,8 @@ Web API + UI for Drift.
   GET  /api/dir?path=...     who_owns + who_knows + drafted fix for one directory
   GET  /api/cleanup          drafted fixes for the most drifted directories
   POST /api/patch            {dirs: [...]} -> a git-apply-able patch (download)
+  POST /api/checkfix         {dirs: [...]} -> apply those drafts to a graph copy: what gets unstuck, what breaks
+  POST /api/whatif           {handles: "@a @b"} -> if they stepped back, where approval would get stuck
   GET  /api/summary          org-wide numbers + backtest results
   GET  /api/health
 
@@ -16,6 +18,7 @@ Run:  uvicorn orggraph.api:app --port 8000      (then open http://localhost:8000
 from __future__ import annotations
 
 import collections
+import contextlib
 import json
 import os
 import threading
@@ -30,7 +33,13 @@ from orggraph.render import template
 from orggraph.tools import Tools
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
-app = FastAPI(title="Drift")
+@contextlib.asynccontextmanager
+async def lifespan(_app):
+    warm()
+    yield
+
+
+app = FastAPI(title="Drift", lifespan=lifespan)
 _agents: dict[str, Agent] = {}
 _tools: Tools | None = None
 _cache: dict = {}
@@ -83,12 +92,12 @@ def check_model():
     print("model check:", _model["status"], flush=True)
 
 
-@app.on_event("startup")
 def warm():
     """Fill the caches in the background so the first visitor doesn't wait for them."""
     def run():
         try:
             areas(); cleanup(); summary()
+            _check_fix([x["dir"] for x in cleanup()["data"]["queue"]])
         except Exception as e:  # the app still works; the page will compute on demand
             print("warm-up failed:", e, flush=True)
         try:
@@ -132,6 +141,10 @@ class Reviewers(BaseModel):
 
 class Patch(BaseModel):
     dirs: list[str]
+
+
+class WhatIf(BaseModel):
+    handles: str
 
 
 @app.get("/")
@@ -204,6 +217,27 @@ def patch(body: Patch, request: Request):
         return JSONResponse({"error": out.note, "skipped": out.data.get("skipped", [])}, status_code=422)
     return PlainTextResponse(out.data["patch"], media_type="text/x-diff",
                              headers={"Content-Disposition": 'attachment; filename="drift-owners.patch"'})
+
+
+@app.post("/api/whatif")
+def what_if(body: WhatIf, request: Request):
+    """What if these people stepped back? Simulated on a GRAPH.COPY that is deleted afterwards."""
+    if (r := limited(request)):
+        return r
+    return _pack(tools().what_if(body.handles[:300]))
+
+
+@app.post("/api/checkfix")
+def check_fix(body: Patch, request: Request):
+    """Apply the drafted changes for these directories to a GRAPH.COPY and report what changes."""
+    if (r := limited(request)):
+        return r
+    return _check_fix(body.dirs)
+
+
+def _check_fix(dirs):
+    dirs = sorted({d for d in dirs if isinstance(d, str)})[:60]
+    return cached(("checkfix", tuple(dirs)), lambda: _pack(tools().check_fix(dirs)))
 
 
 @app.get("/api/summary")

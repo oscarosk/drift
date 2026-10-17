@@ -45,6 +45,7 @@ def main():
     run("-m", "orggraph.load_activity")
     run("-m", "orggraph.load_activity", "--graph", THEN, "--until", "2025-10-16")
     run("-m", "orggraph.groups")
+    run("-m", "orggraph.whatif")
     run("-m", "orggraph.backtest")
     run("-m", "orggraph.eval_reviewers")
     print("\nall done")

@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 540" width="1000" height="540" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif">
+  <title>Drift graph data model: the record (plum) and the work (teal)</title>
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#556274"/></marker>
+    <marker id="arR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8A3F62"/></marker>
+    <marker id="arW" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#17705F"/></marker>
+  </defs>
+  <rect width="1000" height="540" fill="#FFFFFF"/>
+  <style>
+    .n rect { fill: #EDF0F3; stroke: #9AA6B5; stroke-width: 1.2; }
+    .n .t { font-size: 17px; font-weight: 700; fill: #142030; }
+    .n .p { font-size: 12px; fill: #556274; font-family: IBM Plex Mono, Menlo, monospace; }
+    .e { fill: none; stroke: #556274; stroke-width: 1.5; }
+    .rec { stroke: #8A3F62; stroke-width: 2.2; }
+    .wrk { stroke: #17705F; stroke-width: 2.2; }
+    .l { font-size: 12px; fill: #556274; font-family: IBM Plex Mono, Menlo, monospace; }
+    .lr { fill: #8A3F62; } .lw { fill: #17705F; }
+    .k { font-size: 13px; fill: #142030; }
+    .kr { font-size: 13px; fill: #8A3F62; font-weight: 600; } .kw { font-size: 13px; fill: #17705F; font-weight: 600; }
+  </style>
+
+  <!-- edges -->
+  <path class="e rec" d="M200,262 C420,262 520,262 676,262" marker-end="url(#arR)"/>
+  <text class="l lr" x="438" y="252" text-anchor="middle">APPROVER_OF · REVIEWER_OF · EMERITUS_*  {via}</text>
+  <text class="kr" x="438" y="284" text-anchor="middle">what the records say</text>
+
+  <path class="e wrk" d="M170,228 C220,120 330,92 392,92" marker-end="url(#arW)"/>
+  <text class="l lw" x="22" y="118">AUTHORED_PR · REVIEWED</text>
+  <text class="l lw" x="22" y="134">LGTM · APPROVED_PR</text>
+  <text class="kw" x="22" y="154">what people actually do</text>
+
+  <path class="e" d="M508,92 C620,92 700,150 724,226" marker-end="url(#ar)"/>
+  <text class="l" x="628" y="118">TOUCHES {files}</text>
+
+  <path class="e" d="M800,230 C860,170 900,240 838,262" marker-end="url(#ar)"/>
+  <text class="l" x="836" y="190">INSIDE</text>
+  <text class="l" x="836" y="204" style="font-size:11px">(OWNERS inheritance)</text>
+  <path class="e" d="M780,298 C820,350 880,330 842,290" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+  <text class="l" x="850" y="352">WORKS_WITH</text>
+  <text class="l" x="850" y="366" style="font-size:11px">(label propagation</text>
+  <text class="l" x="850" y="380" style="font-size:11px">→ d.group)</text>
+
+  <path class="e" d="M740,298 L740,422" marker-end="url(#ar)"/>
+  <text class="l" x="748" y="366">LABELED</text>
+
+  <path class="e" d="M520,456 L690,456" marker-end="url(#ar)"/>
+  <text class="l" x="604" y="446" text-anchor="middle">OWNED_BY</text>
+
+  <path class="e" d="M170,296 C220,420 300,456 396,456" marker-end="url(#ar)"/>
+  <text class="l" x="232" y="404">AUTHORED · APPROVED_KEP</text>
+
+  <path class="e" d="M150,430 L150,300" marker-end="url(#ar)"/>
+  <text class="l" x="158" y="372">CITES</text>
+  <path class="e" d="M200,462 L394,462" stroke-dasharray="2 3" marker-end="url(#ar)"/>
+  <text class="l" x="210" y="452">ABOUT</text>
+  <text class="l" x="210" y="482" style="font-size:11px">(a Dir, KEP or Person)</text>
+
+  <!-- nodes -->
+  <g class="n"><rect x="80" y="228" width="120" height="68" rx="10"/><text class="t" x="96" y="256">Person</text><text class="p" x="96" y="278">{handle}</text></g>
+  <g class="n"><rect x="392" y="58" width="116" height="68" rx="10"/><text class="t" x="408" y="86">PR</text><text class="p" x="408" y="108">{number, day}</text></g>
+  <g class="n"><rect x="676" y="228" width="128" height="68" rx="10"/><text class="t" x="692" y="256">Dir</text><text class="p" x="692" y="278">{path, group}</text></g>
+  <g class="n"><rect x="690" y="422" width="110" height="64" rx="10"/><text class="t" x="706" y="450">SIG</text><text class="p" x="706" y="470">{name}</text></g>
+  <g class="n"><rect x="396" y="422" width="124" height="64" rx="10"/><text class="t" x="412" y="450">KEP</text><text class="p" x="412" y="470">{number, status}</text></g>
+  <g class="n"><rect x="80" y="430" width="120" height="64" rx="10" style="stroke-dasharray:4 3"/><text class="t" x="96" y="458">Finding</text><text class="p" x="96" y="478">agent memory</text></g>
+
+  <text class="k" x="24" y="30" font-weight="700">Drift's graph, one per organisation</text>
+  <text class="l" x="24" y="50">kubernetes (today) and kubernetes@2025-10-16 (a year ago) live side by side in one FalkorDB instance</text>
+</svg>

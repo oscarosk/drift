@@ -68,6 +68,9 @@ def route_offline(question: str):
         if len(paths) > 1 or "." in paths[0].split("/")[-1]:  # several paths or a file: a concrete change
             return "suggest_reviewers", {"paths": " ".join(paths)}
         return "route", {"path": path}
+    handles = re.findall(r"@([A-Za-z0-9][A-Za-z0-9-]*)", question)
+    if handles and re.search(r"\b(what if|steps? back|stepped back|leaves?|left|quits?|departs?|gone|retire)", q):
+        return "what_if", {"handles": " ".join("@" + h for h in handles)}
     if path and re.search(r"\b(works? with|working group|same people|team|related|together)\b", q):
         return "working_group", {"path": path}
     if path and re.search(r"\b(knows|really|actually|silent|stale|shadow|active|drift)\b", q):
@@ -149,8 +152,7 @@ class Agent:
         elif d.get("kep"):
             memory = self.memory.recall(kep=d["kep"])
         text, written_by = self.write(question, answer)
-        for m in memory:  # an earlier answer is only news if it differs from today's
-            m["same_as_now"] = m["text"].strip() == text.strip()
+        memory = Memory.changes(memory, text)  # an earlier answer is only news if it differs from today's
         if remember and answer.outcome == "answered_with_path":
             self.memory.remember(answer, text, self.session)
         return {"question": question, "tool": name, "args": answer.args, "outcome": answer.outcome,

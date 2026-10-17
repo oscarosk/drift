@@ -202,6 +202,45 @@ details.how td { padding: 2px 16px 2px 0; font: 12.5px var(--mono); }
 .chainlist li { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 4px 18px; padding: 9px 0; border-top: 1px solid var(--rule); font-size: 14.5px; }
 .chainlist code { word-break: break-all; }
 
+/* what-if: where an approval request is routed, before and after */
+.route { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); overflow: hidden; margin-top: 10px; }
+.route > div { padding: 12px 14px; }
+.route > div + div { border-left: 1px solid var(--rule); }
+.route .lbl { font-size: 12.5px; color: var(--muted); display: block; margin-bottom: 4px; }
+.route .to { font: 500 13.5px var(--mono); word-break: break-all; }
+.route .st { font-size: 13.5px; margin-top: 4px; }
+.route .trail { margin-top: 8px; }
+.dots i.x { background: transparent; box-shadow: inset 0 0 0 2px var(--muted); opacity: .45; position: relative; }
+.check { display: grid; grid-template-columns: repeat(3, auto) 1fr; gap: 0 28px; align-items: end; padding: 16px 18px; border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); margin-top: 22px; }
+.check .k { font: 750 34px/1 var(--head); font-stretch: 80%; }
+.check .l { font-size: 13.5px; color: var(--muted); margin-top: 4px; }
+.check .side { justify-self: end; text-align: right; font-size: 14px; color: var(--muted); max-width: 40ch; }
+.wi-pick { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 6px 0 12px; }
+.wi-pick label { display: inline-flex; gap: 6px; align-items: center; font-size: 14.5px; cursor: pointer; }
+.wi-pick input { accent-color: var(--ink); }
+.wi-row { margin-top: 18px; }
+.wi-row h3 { font: 500 14.5px var(--mono); letter-spacing: 0; }
+
+/* evidence graph: the nodes an answer actually used, in columns */
+.eg { margin-top: 30px; }
+.eg .scroll { overflow-x: auto; margin-top: 8px; }
+.eg svg { width: 100%; min-width: 720px; height: auto; display: block; }
+.eg .edge { fill: none; stroke: var(--rule); stroke-width: 1.4; }
+.eg .edge.hot { stroke: var(--work); stroke-opacity: .55; stroke-width: 1.8; }
+.eg .edge.rec { stroke: var(--record); stroke-opacity: .5; stroke-dasharray: 3 3; }
+.eg rect { fill: var(--sheet); stroke: var(--rule); stroke-width: 1; }
+.eg .person rect { stroke: var(--work); stroke-width: 1.6; }
+.eg .person.top rect { fill: var(--work-bg); }
+.eg .area rect { fill: var(--faint); }
+.eg .owner rect { stroke: var(--record); fill: var(--record-bg); }
+.eg .owner.active rect { stroke: var(--rule); fill: var(--sheet); }
+.eg text { font: 500 12px var(--mono); fill: var(--ink); }
+.eg .person text { font: 600 12.5px var(--sans); }
+.eg .owner text { fill: var(--record); }
+.eg .owner.active text { fill: var(--muted); }
+.eg .col { font: 500 12px var(--sans); fill: var(--muted); }
+.eg a:focus-visible rect { stroke: var(--focus); stroke-width: 2.5; }
+
 /* ---- fix the records ---- */
 .queue-bar { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 22px;
   padding: 12px 14px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; position: sticky; top: 98px; z-index: 5; }
@@ -254,6 +293,8 @@ footer { border-top: 1px solid var(--rule); padding: 20px 0 44px; color: var(--m
 footer p { margin: 0; max-width: 90ch; }
 
 @media (max-width: 920px) {
+  .route { grid-template-columns: 1fr; } .route > div + div { border-left: 0; border-top: 1px solid var(--rule); }
+  .check { grid-template-columns: repeat(3, auto); } .check .side { grid-column: 1 / -1; justify-self: start; text-align: left; margin-top: 10px; }
   .chainlist li { grid-template-columns: 1fr; }
   .hero, .rev, .vs, .groupmap { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   .doors, .results { grid-template-columns: 1fr; }
@@ -379,6 +420,76 @@ function ownersFile(d, opts = {}) {
     ${rows.join("")}${opts.foot ? `<div class="foot">${opts.foot}</div>` : ""}</div>`;
 }
 
+// ---- evidence graph -------------------------------------------------------------------------
+// cols: [{title, nodes: [{id, label, cls, href, title}]}]; edges: [[fromId, toId, cls]]. Laid out in columns, left to right.
+function evidenceGraph(cols, edges) {
+  const W = 1000, colW = W / cols.length, rowH = 34, top = 30, nodeW = colW - 46;
+  const H = top + rowH * Math.max(...cols.map((c) => c.nodes.length)) + 6;
+  const pos = {};
+  cols.forEach((c, i) => {
+    const pad = (H - top - rowH * c.nodes.length) / 2;
+    c.nodes.forEach((n, j) => { pos[n.id] = { x: i * colW + 8, y: top + pad + j * rowH, w: nodeW }; });
+  });
+  const fit = (t, w) => { const max = Math.floor((w - 16) / 7.3); return t.length > max ? "…" + t.slice(-(max - 1)) : t; };
+  const ed = edges.filter(([a, b]) => pos[a] && pos[b]).map(([a, b, cls = ""]) => {
+    const p = pos[a], q = pos[b], x1 = p.x + p.w, y1 = p.y + 13, x2 = q.x, y2 = q.y + 13, mx = (x1 + x2) / 2;
+    return `<path class="edge ${cls}" d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}"/>`;
+  }).join("");
+  const nodes = cols.map((c) => c.nodes.map((n) => { const p = pos[n.id];
+    const body = `<rect x="${p.x}" y="${p.y}" width="${p.w}" height="26" rx="6"/><text x="${p.x + 9}" y="${p.y + 17.5}">${esc(fit(n.label, p.w))}</text>`;
+    return `<g class="${n.cls || ""}">${n.href ? `<a href="${esc(n.href)}"${n.href.startsWith("http") ? ' target="_blank" rel="noopener"' : ""}><title>${esc(n.title || n.label)}</title>${body}</a>` : `<title>${esc(n.title || n.label)}</title>${body}`}</g>`; }).join("")).join("");
+  const heads = cols.map((c, i) => `<text class="col" x="${i * colW + 8}" y="14">${esc(c.title)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="The people, pull requests, areas and listed owners behind this answer">${heads}${ed}${nodes}</svg>`;
+}
+function reviewerGraph(d) {
+  const people = d.people.slice(0, 3), prs = [], areas = [], owners = [], edges = [];
+  const add = (list, n) => { if (!list.find((x) => x.id === n.id)) list.push(n); };
+  people.forEach((p, i) => Object.entries(p.by_area || {}).forEach(([dir, nums]) => {
+    nums.slice(0, i === 0 ? 2 : 1).forEach((n) => {
+      add(prs, { id: "pr" + n, label: "#" + n, href: `https://github.com/kubernetes/kubernetes/pull/${n}`, title: `PR #${n}` });
+      edges.push(["p" + p.handle, "pr" + n, i === 0 ? "hot" : ""], ["pr" + n, "a" + dir, i === 0 ? "hot" : ""]);
+    });
+    add(areas, { id: "a" + dir, label: dir, cls: "area", href: "#/area/" + encodeURIComponent(dir), title: dir });
+  }));
+  d.areas.filter((a) => areas.find((x) => x.id === "a" + a.dir)).forEach((a) => a.silent_approvers.slice(0, 2).forEach((h) => {
+    add(owners, { id: "o" + h, label: "@" + h, cls: "owner", href: "https://github.com/" + h, title: `@${h}: listed approver, silent for a year` });
+    edges.push(["a" + a.dir, "o" + h, "rec"]);
+  }));
+  if (prs.length > 9) prs.length = 9;
+  return evidenceGraph([
+    { title: "Who to ask", nodes: people.map((p, i) => ({ id: "p" + p.handle, label: "@" + p.handle, cls: "person" + (i === 0 ? " top" : ""), href: "https://github.com/" + p.handle })) },
+    { title: "Pull requests they reviewed", nodes: prs },
+    { title: "Areas of your change", nodes: areas },
+    ...(owners.length ? [{ title: "Listed approvers, silent a year", nodes: owners.slice(0, 8) }] : []),
+  ], edges);
+}
+
+// ---- what-if rendering ----------------------------------------------------------------------
+// One dot per approver listed at the level a request is routed to: filled = active, hollow = silent, faded = stepped back.
+const routeDots = (side) => `<span class="dots">${side.listed.map((h) =>
+  `<i class="${side.active.includes(h) ? "" : "s"}" title="@${esc(h)}${side.active.includes(h) ? " (active)" : " (silent for a year)"}"></i>`).join("")}</span>`;
+const STATE = { covered: "Reaches an active approver", stuck: "Waits on silent approvers only", none: "No approver anywhere up the chain" };
+function routeCompare(row, removed = []) {
+  const side = (label, x) => `<div><span class="lbl">${label}</span>
+    ${x.routed_to ? `<div class="to">${areaLink(x.routed_to)}${x.routed_to === row.dir ? "" : " <span class=\"tiny\">(inherited)</span>"}</div>${routeDots(x)}` : `<div class="to">nowhere</div>`}
+    <div class="st ${x.state === "covered" ? "work" : "record"}">${STATE[x.state]}${x.active.length ? `: ${x.active.slice(0, 3).map(gh).join(", ")}${x.active.length > 3 ? ` and ${x.active.length - 3} more` : ""}` : ""}</div></div>`;
+  return `<div class="route">${side("Today, approval requests go to", row.before)}${side("After the change", row.after)}</div>`;
+}
+function whatIfHtml(r, opts = {}) {
+  if (r.outcome !== "answered_with_path") return `<p>${linkify(r.text || r.note)}</p>`;
+  const d = r.data, removed = d.people || [];
+  const rows = (list, title, sub, n = 3) => list.length ? `<section class="wi-row"><h2 style="font-size:18px">${title}</h2><p class="tiny" style="margin:2px 0 0">${sub}</p>
+    ${list.slice(0, n).map((x) => `<div class="wi-row"><h3>${areaLink(x.dir)} <span class="tiny">${x.prs} PRs in the last year</span></h3>${routeCompare(x, removed)}
+      ${x.could_cover && x.could_cover.length ? `<p class="tiny">Already reviewing here: ${x.could_cover.map((c) => `${gh(c.handle)} (${c.prs} PRs)`).join(", ")}</p>` : ""}</div>`).join("")}
+    ${list.length > n ? `<p class="tiny">And ${list.length - n} more: ${list.slice(n, n + 8).map((x) => areaLink(x.dir)).join(", ")}${list.length > n + 8 ? "…" : ""}</p>` : ""}</section>` : "";
+  return `${opts.noText ? "" : `<p class="a" style="font-size:17px;margin:0">${linkify(r.text)}</p>`}
+    ${rows(d.stuck, "Would get stuck", "Approval requests would only reach approvers who've been silent for a year.")}
+    ${rows(d.fixed, "Would get unstuck", "Today these only reach silent approvers; afterwards they fall through to active ones.", 2)}
+    ${rows(d.moved, "Approval moves up the chain", "Still reaches an active approver, one or more levels higher.", 2)}
+    <p class="tiny" style="margin-top:16px">Simulated on a copy of the graph made with FalkorDB's <code>GRAPH.COPY</code>, then deleted. The live graph was not changed.</p>
+    ${opts.noHow ? "" : how(r)}`;
+}
+
 // ---- routing ------------------------------------------------------------------------------
 const routes = { "": viewHome, reviewer: viewReviewer, areas: viewAreas, area: viewArea, fix: viewFix, cleanup: viewFix, proof: viewProof };
 function route() {
@@ -422,6 +533,9 @@ async function viewHome() {
     const q = await queue();
     const best = q.queue.find((x) => x.remove.length && x.remove.length <= 2 && x.add_reviewers.length) || q.queue[0];
     $("#fix-stat").textContent = `${q.queue.length} fixes drafted`;
+    post("/api/checkfix", { dirs: q.queue.map((x) => x.dir) }).then((r) => {
+      if (r.outcome === "answered_with_path") $("#fix-stat").textContent = `${q.queue.length} fixes drafted. Checked on a copy of the graph: they unstick ${r.data.fixed.length} areas and break none.`;
+    }).catch(() => {});
     if (best) $("#hero-file").innerHTML = ownersFile(best, { link: true, foot: `<span>Drafted from activity up to ${day(q.as_of)}. Drift never edits Kubernetes.</span><a href="#/area/${encodeURIComponent(best.dir)}">Open this area</a>` });
   } catch (err) { $("#hero-file").innerHTML = ""; }
 }
@@ -474,6 +588,7 @@ async function findReviewers() {
         <p>${top.approvals} approvals and ${top.reviewed} reviews across ${top.areas.length === 1 ? "this area" : `${top.areas.length} of these areas`} since ${day(d.since)}; last active ${day(top.last_active)}.</p>
         ${trail(steps)}</div>
       ${crossNote ? `<p class="cross">${linkify(crossNote)}</p>` : ""}
+      <section class="eg"><h2 style="font-size:19px">The evidence, as a graph</h2><p class="tiny" style="margin:2px 0 0">The nodes and edges this answer came from. Teal is the work people did; plum dashes lead to approvers the OWNERS files list who've been silent for a year.</p><div class="scroll">${reviewerGraph(d)}</div></section>
       ${rest.length ? `<section class="sec" style="margin-top:30px"><h2 style="font-size:19px">Also good</h2>
         <table class="t"><thead><tr><th>Person</th><th class="n">Approvals</th><th class="n">Reviews</th><th class="n hide-sm">Last active</th><th class="hide-sm">Recent PRs</th></tr></thead><tbody>${
           rest.map((p) => `<tr><td>${gh(p.handle)}</td><td class="n">${p.approvals}</td><td class="n">${p.reviewed}</td><td class="n hide-sm">${day(p.last_active)}</td><td class="hide-sm">${p.example_prs.slice(0, 2).map(pr).join(" ")}</td></tr>`).join("")}</tbody></table></section>` : ""}
@@ -575,6 +690,10 @@ async function viewArea(path) {
       ? `<p class="sub">A proposal for a maintainer, with the evidence beside each line. Drift never edits Kubernetes.</p>${ownersFile(draft.data, { foot: `${draft.data.notes.map((n) => `<span>${linkify(n)}</span>`).join("")}<span class="row-actions" style="margin:0"><button type="button" id="dl-one">Download patch</button><button type="button" class="quiet" id="add-q">${state.picked.has(draft.data.dir) ? "In your fix list" : "Add to fix list"}</button></span>` })}`
       : `<p class="sub">${esc(draft.note || "The listed approvers are active, so there's nothing to change.")}</p>`],
     ["group", "Working group", groupMap(r.group)],
+    ["whatif", "What if", `<p class="sub">Pick listed approvers and see what happens to approval routing if they step back, here and everywhere else they're listed. Simulated on a copy of the graph.</p>
+      <div class="wi-pick">${approvers.length ? approvers.map((a, i) => `<label><input type="checkbox" value="${esc(a.handle)}" ${i === approvers.findIndex((x) => x.status !== "silent") ? "checked" : ""}>@${esc(a.handle)}${a.status === "silent" ? ' <span class="tiny">(silent)</span>' : ""}</label>`).join("") : '<span class="tiny">No approvers listed here.</span>'}</div>
+      <div class="row-actions" style="margin-top:0"><input type="text" id="wi-more" placeholder="Anyone else, e.g. @deads2k" style="max-width:260px"><button type="button" id="wi-run">Simulate</button></div>
+      <div id="wi-out" style="margin-top:14px"></div>`],
     ["chain", "Ownership chain", `<p class="sub">OWNERS files inherit: approval for <code>${esc(k.dir)}</code> can also come from every level above it, up to the root.</p>
       <ul class="chainlist">${own.levels.map((l) => `<li><code>${esc(l.dir)}</code><span>${l.approvers.length ? l.approvers.map(gh).join(", ") : `<span class="tiny">no approvers listed</span>`}${l.stops_inheritance ? ` <span class="tiny">(inheritance stops here)</span>` : ""}</span></li>`).join("")}</ul>`],
   ];
@@ -597,6 +716,14 @@ async function viewArea(path) {
     if (j >= 0) { select(tabBtns[j]); tabBtns[j].focus(); } }; });
   v.querySelectorAll("[data-more]").forEach((b) => b.onclick = () => {
     $("#" + b.dataset.more).insertAdjacentHTML("beforeend", moreRows[b.dataset.more]); b.remove(); });
+  const wiRun = $("#wi-run");
+  if (wiRun) wiRun.onclick = async () => {
+    const handles = [...v.querySelectorAll(".wi-pick input:checked")].map((c) => "@" + c.value).concat($("#wi-more").value.trim()).join(" ").trim();
+    const out = $("#wi-out");
+    if (!handles) { out.innerHTML = `<p class="tiny">Pick at least one person.</p>`; return; }
+    out.innerHTML = `<p class="empty">Copying the graph and re-routing approvals…</p>`;
+    try { out.innerHTML = whatIfHtml(await post("/api/whatif", { handles }), { noHow: true }); } catch (err) { fail(out, err); }
+  };
   const dl = $("#dl-one"); if (dl) dl.onclick = () => downloadPatch([draft.data.dir], dl);
   const aq = $("#add-q"); if (aq) aq.onclick = () => { state.picked.add(draft.data.dir); aq.textContent = "In your fix list"; };
 }
@@ -614,14 +741,32 @@ async function viewFix() {
   const count = () => items.filter((x) => state.picked.has(x.dir)).length;
   const what = (x) => [x.remove.length ? `<span class="record">move ${x.remove.map((h) => "@" + esc(h)).join(", ")} to emeritus</span>` : "",
     x.add_reviewers.length ? `<span class="work">add ${x.add_reviewers.map((h) => "@" + esc(h)).join(", ")} as reviewer${x.add_reviewers.length > 1 ? "s" : ""}</span>` : ""].filter(Boolean).join("; ");
-  $("#queue").innerHTML = `<div class="queue-bar"><label><input type="checkbox" id="all" ${count() === items.length ? "checked" : ""}> All ${items.length}</label>
+  $("#queue").innerHTML = `<div id="check"></div><div class="queue-bar"><label><input type="checkbox" id="all" ${count() === items.length ? "checked" : ""}> All ${items.length}</label>
       <span class="tiny"><span id="n">${count()}</span> selected. Apply with <span class="cmd">git apply drift-owners.patch</span></span>
       <button type="button" id="dl">Download patch</button></div>
     <ul class="queue">${items.map((x, i) => `<li><div class="q-head"><input type="checkbox" data-dir="${esc(x.dir)}" aria-label="Include ${esc(x.dir)}" ${state.picked.has(x.dir) ? "checked" : ""}>
         <div><div class="p">${areaLink(x.dir)}</div><div class="what">${what(x)}</div></div>
         <button type="button" class="quiet" data-toggle="${i}" aria-expanded="false">Show the file</button></div>
         <div class="q-body" hidden id="qb-${i}"></div></li>`).join("")}</ul>`;
-  const sync = () => { $("#n").textContent = count(); $("#all").checked = count() === items.length; $("#dl").disabled = count() === 0; };
+  const sync = () => { $("#n").textContent = count(); $("#all").checked = count() === items.length; $("#dl").disabled = count() === 0; runCheck(); };
+  let checkTimer = null;
+  const runCheck = () => { clearTimeout(checkTimer); checkTimer = setTimeout(async () => {
+    const dirs = items.filter((x) => state.picked.has(x.dir)).map((x) => x.dir), box = $("#check");
+    if (!box) return;
+    if (!dirs.length) { box.innerHTML = ""; return; }
+    box.innerHTML = `<div class="check"><div><div class="k">…</div><div class="l">Checking ${dirs.length} changes on a copy of the graph</div></div></div>`;
+    try {
+      const r = await post("/api/checkfix", { dirs }), d = r.data;
+      if (r.outcome !== "answered_with_path") { box.innerHTML = `<p class="tiny">${esc(r.note || r.text)}</p>`; return; }
+      box.innerHTML = `<div class="check">
+          <div><div class="k work">${d.fixed.length}</div><div class="l">areas unstuck</div></div>
+          <div><div class="k ${d.stuck.length ? "record" : ""}">${d.stuck.length}</div><div class="l">areas made stuck</div></div>
+          <div><div class="k">${d.stuck_before} → ${d.stuck_after}</div><div class="l">areas waiting only on silent approvers</div></div>
+          <div class="side">Drift applied the ${d.changes} changes to a copy of the graph and re-ran ownership routing. <button type="button" class="quiet" id="see-check" style="margin-top:6px">${d.fixed.length || d.stuck.length ? "Show which areas" : "Details"}</button></div></div>
+        <div id="check-detail" hidden></div>`;
+      $("#see-check").onclick = () => { const det = $("#check-detail"); if (!det.innerHTML) det.innerHTML = whatIfHtml(r, { noText: true }); det.hidden = !det.hidden; };
+    } catch (err) { box.innerHTML = `<p class="tiny">${esc(err.message)}</p>`; }
+  }, 350); };
   $("#queue").querySelectorAll("input[data-dir]").forEach((c) => c.onchange = () => { c.checked ? state.picked.add(c.dataset.dir) : state.picked.delete(c.dataset.dir); sync(); });
   $("#all").onchange = (e) => { items.forEach((x) => e.target.checked ? state.picked.add(x.dir) : state.picked.delete(x.dir)); $("#queue").querySelectorAll("input[data-dir]").forEach((c) => c.checked = e.target.checked); sync(); };
   $("#queue").querySelectorAll("[data-toggle]").forEach((b) => b.onclick = () => {
@@ -690,7 +835,7 @@ async function viewProof() {
 }
 
 // ---- ask drawer --------------------------------------------------------------------------
-const EXAMPLES = ["How stale is ownership across Kubernetes?", "Who really works on pkg/kubelet/cm/cpumanager?", "Which areas work with pkg/kubelet/cm/dra?", "Why was KEP 2340 decided?", "Who owns pkg/kublet?"];
+const EXAMPLES = ["How stale is ownership across Kubernetes?", "Who really works on pkg/kubelet/cm/cpumanager?", "What if @deads2k stepped back?", "Which areas work with pkg/kubelet/cm/dra?", "Why was KEP 2340 decided?", "Who owns pkg/kublet?"];
 let lastFocus = null;
 function openDrawer(html) { lastFocus = document.activeElement; $("#drawer-body").innerHTML = html; $("#drawer").hidden = false; $("#shade").hidden = false; $("#close").focus(); }
 function closeDrawer() { $("#drawer").hidden = true; $("#shade").hidden = true; (lastFocus || $("#q")).focus(); }
@@ -710,10 +855,18 @@ async function ask(q) {
     const r = await post("/api/ask", { question: q, session });
     const sugg = (r.data && r.data.suggestions || []).map((s) => `<button type="button" class="quiet" data-dir="${esc(s)}">${esc(s)}</button>`).join("");
     const mem = r.memory || [], same = mem.filter((m) => m.same_as_now), diff = mem.filter((m) => !m.same_as_now);
-    const memHtml = diff.length ? diff.slice(0, 2).map((m) => `<p class="memory">Earlier answer, ${day(m.learned_at)}: ${linkify(m.text)}</p>`).join("")
+    const changeLine = (m) => [m.added && m.added.length ? `now also names ${m.added.slice(0, 4).map(gh).join(", ")}` : "",
+      m.dropped && m.dropped.length ? `no longer names ${m.dropped.slice(0, 4).map(gh).join(", ")}` : ""].filter(Boolean).join("; ");
+    const memHtml = diff.length ? diff.slice(0, 2).map((m) => changeLine(m)
+        ? `<p class="memory">Drift answered this on ${day(m.learned_at)}. Since then the answer ${changeLine(m)}.</p>`
+        : `<p class="memory">Earlier answer, ${day(m.learned_at)}: ${linkify(m.text)}</p>`).join("")
       : same.length ? `<p class="memory">Drift answered this on ${day(same[0].learned_at)} too, and the graph still says the same.</p>` : "";
     const picked = r.picked_by && r.picked_by.startsWith("model") ? `chosen by ${esc(r.picked_by)}` : "chosen by keyword matching";
     const wrote = (r.written_by || "").startsWith("model") ? "sentence written by the model and checked against the graph" : "sentence built from the graph result";
+    if (r.tool === "what_if" && r.outcome === "answered_with_path") {
+      $("#drawer-body").innerHTML = `<p class="q">${esc(q)}</p>${whatIfHtml(r)}<hr><p class="tiny">Try another</p>${examplesHtml(q)}`;
+      wireDrawer(); return;
+    }
     $("#drawer-body").innerHTML = `<p class="q">${esc(q)}</p><p class="a">${linkify(r.text)}</p>
       ${sugg ? `<div class="examples">${sugg}</div>` : ""}
       ${(r.paths || []).length ? `<div style="margin-top:16px">${trailFromPath(r.paths[0])}</div>` : ""}
