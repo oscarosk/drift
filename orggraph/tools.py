@@ -406,6 +406,7 @@ class Tools:
                 e["areas"].append(d)
                 e["last_active"] = max(e["last_active"], last)
                 e["example_prs"] += [x for x in ex if x not in e["example_prs"]]
+                e.setdefault("by_area", {})[d] = list(ex)       # which PRs connect this person to this area
         ranked = sorted(people.values(), key=lambda e: (-len(e["areas"]), -e["score"], e["handle"]))[:6]
         if not ranked:
             return self._answer("not_in_graph", "suggest_reviewers", args, data={"areas": areas, "since": since},
@@ -522,6 +523,19 @@ class Tools:
             "people": [{"handle": h, "prs": n, "areas": a} for h, n, a in people]},
             paths=[[d, f"same people as {y} (e.g. @{ps[0]})"] for y, n, ps in links[:3] if ps])
 
+    # ---- tool 11 / 12: what-if on a copy of the graph (orggraph.whatif) -------------------
+    def what_if(self, handles) -> Answer:
+        """If these people stopped approving, where would approval requests get stuck? Runs on a GRAPH.COPY."""
+        from orggraph.whatif import step_back
+        if isinstance(handles, str):
+            handles = re.findall(r"@?([A-Za-z0-9][A-Za-z0-9-]*)", handles)
+        return step_back(self, handles)
+
+    def check_fix(self, dirs: list[str]) -> Answer:
+        """Apply the drafted OWNERS changes to a GRAPH.COPY and check no area is left waiting on silent approvers."""
+        from orggraph.whatif import check_fix
+        return check_fix(self, dirs)
+
 
 CATALOGUE = {
     "who_owns": {"fn": "who_owns", "args": {"path": "directory or file path in kubernetes/kubernetes"},
@@ -537,6 +551,8 @@ CATALOGUE = {
     "propose_owners_update": {"fn": "propose_owners_update",
                               "args": {"path": "directory path", "months": "int", "min_prs": "int, default 10"},
                               "desc": "Draft an OWNERS change for a directory with evidence for every line (a proposal, never applied)."},
+    "what_if": {"fn": "what_if", "args": {"handles": "one or more GitHub handles, e.g. '@liggitt @dims'"},
+                "desc": "What if these people stepped back: which areas' approval requests would wait on silent approvers, and who already reviews there. Simulated on a copy of the graph."},
     "working_group": {"fn": "working_group", "args": {"path": "directory path"},
                       "desc": "Areas worked on by the same people as this one (found with label propagation), their SIG labels and core people."},
     "suggest_reviewers": {"fn": "suggest_reviewers",

@@ -39,3 +39,20 @@ def test_empty_result_must_say_so():
 def test_template_always_passes_its_own_check():
     a = knows_answer()
     assert check(template(a), a)[0]
+
+
+def test_what_if_template_names_only_people_in_the_result():
+    a = Answer("answered_with_path", "what_if", {"handles": ["alice"]}, data={
+        "people": ["alice"], "stuck": [{"dir": "pkg/q", "prs": 5, "could_cover": [{"handle": "bob", "prs": 3}],
+                                        "before": {}, "after": {}}], "fixed": [], "moved": []})
+    text = template(a)
+    assert "@alice" in text and "@bob" in text and "pkg/q" in text
+    assert check(text, a)[0]
+    assert not check(text + " Ask @mallory.", a)[0]
+
+
+def test_check_fix_template_states_before_and_after():
+    a = Answer("answered_with_path", "check_fix", {"dirs": ["a"]}, data={
+        "changes": 3, "fixed": [{"dir": "a"}], "stuck": [], "moved": [], "stuck_before": 5, "stuck_after": 4, "safe": True})
+    text = template(a)
+    assert "5 before, 4 after" in text and check(text, a)[0]

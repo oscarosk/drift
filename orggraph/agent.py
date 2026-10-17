@@ -68,6 +68,9 @@ def route_offline(question: str):
         if len(paths) > 1 or "." in paths[0].split("/")[-1]:  # several paths or a file: a concrete change
             return "suggest_reviewers", {"paths": " ".join(paths)}
         return "route", {"path": path}
+    handles = re.findall(r"@([A-Za-z0-9][A-Za-z0-9-]*)", question)
+    if handles and re.search(r"\b(what if|steps? back|stepped back|leaves?|left|quits?|departs?|gone|retire)", q):
+        return "what_if", {"handles": " ".join("@" + h for h in handles)}
     if path and re.search(r"\b(works? with|working group|same people|team|related|together)\b", q):
         return "working_group", {"path": path}
     if path and re.search(r"\b(knows|really|actually|silent|stale|shadow|active|drift)\b", q):
@@ -87,6 +90,7 @@ class Agent:
         self.key = os.getenv("OPENAI_API_KEY", "")
         self.model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
         self.use_llm = bool(self.key) if use_llm is None else use_llm
+        self.last_error = ""
 
     # ---- model calls (plain HTTP, no SDK) ----------------------------------------------
     def _chat(self, messages, tools=None):
@@ -94,7 +98,14 @@ class Agent:
         if tools:
             body |= {"tools": tools, "tool_choice": "required"}
         r = requests.post(OPENAI_URL, json=body, timeout=60, headers={"Authorization": f"Bearer {self.key}"})
-        r.raise_for_status()
+        if r.status_code != 200:
+            try:
+                detail = r.json().get("error", {}).get("message", "")
+            except ValueError:
+                detail = r.text
+            err = f"OpenAI {r.status_code}: {detail[:200]}"
+            print("model call failed:", err, flush=True)   # shows in the server log (e.g. Render)
+            raise RuntimeError(err)
         return r.json()["choices"][0]["message"]
 
     def pick_tool(self, question: str):
@@ -104,9 +115,10 @@ class Agent:
             msg = self._chat([{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}], _tool_schemas())
             call = msg["tool_calls"][0]["function"]
             return call["name"], json.loads(call["arguments"] or "{}"), f"model {self.model}"
-        except Exception as e:  # network / quota / bad output: fall back, but say so
+        except Exception as e:  # network / quota / bad output: fall back quietly, keep the reason for the log
+            self.last_error = str(e)[:200]
             name, args = route_offline(question)
-            return name, args, f"keyword router (model failed: {type(e).__name__})"
+            return name, args, "keyword router"
 
     def write(self, question: str, answer) -> tuple[str, str]:
         fallback = template(answer)
@@ -117,12 +129,14 @@ class Agent:
             text = self._chat([{"role": "system", "content": WRITE},
                                {"role": "user", "content": f"Question: {question}\nTool result: {payload}"}])["content"].strip()
         except Exception as e:
-            return fallback, f"template (model failed: {type(e).__name__})"
+            self.last_error = str(e)[:200]
+            return fallback, "template"
         ok, why = check(text, answer)
         return (text, "model, checked") if ok else (fallback, f"template (model sentence rejected: {why})")
 
     # ---- one turn ---------------------------------------------------------------------
     def ask(self, question: str, remember: bool = True) -> dict:
+        self.last_error = ""
         name, args, picker = self.pick_tool(question)
         if not name or name not in CATALOGUE:
             return {"question": question, "outcome": "unknown_entity", "text":
@@ -138,12 +152,13 @@ class Agent:
         elif d.get("kep"):
             memory = self.memory.recall(kep=d["kep"])
         text, written_by = self.write(question, answer)
+        memory = Memory.changes(memory, text)  # an earlier answer is only news if it differs from today's
         if remember and answer.outcome == "answered_with_path":
             self.memory.remember(answer, text, self.session)
         return {"question": question, "tool": name, "args": answer.args, "outcome": answer.outcome,
                 "text": text, "written_by": written_by, "picked_by": picker, "data": answer.data,
                 "paths": answer.paths, "trace": answer.trace, "note": answer.note,
-                "memory": memory, "session": self.session}
+                "memory": memory, "session": self.session, "model_error": self.last_error}
 
 
 if __name__ == "__main__":

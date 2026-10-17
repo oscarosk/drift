@@ -4,187 +4,314 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Drift</title>
+<meta name="description" content="Who Kubernetes' OWNERS files say owns the code, next to who actually reviews it. Built on FalkorDB.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+/* Two inks: plum is what the records say, teal is what people actually do. */
 :root {
-  --paper: #F4F6F8; --sheet: #FFFFFF; --ink: #1B2230; --muted: #5A687D; --rule: #D9DEE5;
-  --silent: #8E4A66; --silent-bg: #F6EBF0; --active: #1D7468; --active-bg: #E5F2EF;
-  --mark: #E9EEF6; --focus: #2F5DA8; --shade: rgba(27, 34, 48, .28);
+  --paper: #EDF0F3; --sheet: #FFFFFF; --ink: #142030; --muted: #556274; --rule: #CDD4DD; --faint: #E3E8EE;
+  --record: #8A3F62; --record-bg: #F6E7EE; --work: #17705F; --work-bg: #DDF0EA;
+  --focus: #2B59A8; --shade: rgba(20, 32, 48, .32);
+  --head: "Archivo", "IBM Plex Sans", system-ui, sans-serif;
   --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #12161D; --sheet: #1A2029; --ink: #E6EAF0; --muted: #9AA6B8; --rule: #2C3542;
-    --silent: #D68FAE; --silent-bg: #3A2330; --active: #6CC6B4; --active-bg: #19302C; --mark: #222B38; --focus: #8DB3F2; --shade: rgba(0,0,0,.5);
+    --paper: #0F141B; --sheet: #161D26; --ink: #E4E9EF; --muted: #93A0B2; --rule: #2A3443; --faint: #1C2430;
+    --record: #DE93B5; --record-bg: #3A2230; --work: #6CCBB6; --work-bg: #142F29; --focus: #8DB3F2; --shade: rgba(0, 0, 0, .55);
   }
 }
 :root[data-theme="dark"] {
-  --paper: #12161D; --sheet: #1A2029; --ink: #E6EAF0; --muted: #9AA6B8; --rule: #2C3542;
-  --silent: #D68FAE; --silent-bg: #3A2330; --active: #6CC6B4; --active-bg: #19302C; --mark: #222B38; --focus: #8DB3F2; --shade: rgba(0,0,0,.5);
+  --paper: #0F141B; --sheet: #161D26; --ink: #E4E9EF; --muted: #93A0B2; --rule: #2A3443; --faint: #1C2430;
+  --record: #DE93B5; --record-bg: #3A2230; --work: #6CCBB6; --work-bg: #142F29; --focus: #8DB3F2; --shade: rgba(0, 0, 0, .55);
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.55 var(--sans); }
-a { color: inherit; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+a { color: inherit; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: 3px; }
 a:hover { text-decoration-color: currentColor; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
-code, .mono { font-family: var(--mono); font-size: .92em; }
-.wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+code, .mono { font-family: var(--mono); font-size: .9em; }
+h1, h2, h3 { font-family: var(--head); font-stretch: 85%; letter-spacing: -0.01em; margin: 0; }
+.wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
 .muted { color: var(--muted); }
-.empty { color: var(--muted); }
-button { font: inherit; font-weight: 600; padding: 10px 16px; border-radius: 8px; border: 1px solid var(--ink);
-  background: var(--ink); color: var(--paper); cursor: pointer; }
+.record { color: var(--record); } .work { color: var(--work); }
+button, .btn { font: 600 15px/1 var(--sans); padding: 11px 16px; border-radius: 8px; border: 1px solid var(--ink);
+  background: var(--ink); color: var(--paper); cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
 button[disabled] { opacity: .45; cursor: not-allowed; }
-button.quiet { background: transparent; color: var(--ink); border-color: var(--rule); font-weight: 500; padding: 6px 12px; font-size: 14px; }
+button.quiet, .btn.quiet { background: transparent; color: var(--ink); border-color: var(--rule); font-weight: 500; padding: 8px 12px; font-size: 14px; }
 input[type=text], input[type=search], textarea { font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule);
   border-radius: 8px; padding: 10px 12px; width: 100%; }
-textarea { font-family: var(--mono); font-size: 14px; line-height: 1.5; resize: vertical; min-height: 120px; }
+textarea { font-family: var(--mono); font-size: 14px; line-height: 1.55; resize: vertical; min-height: 132px; }
 
-/* ---- app bar ---- */
-.bar { position: sticky; top: 0; z-index: 20; background: var(--paper); border-bottom: 1px solid var(--rule); }
-.bar-row { display: flex; align-items: center; gap: 18px; padding: 12px 0; }
-.logo { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; text-decoration: none; }
-.org { display: flex; flex-direction: column; line-height: 1.25; }
-.org .name { font-family: var(--mono); font-size: 14px; }
-.org .fresh { font-size: 12.5px; color: var(--muted); }
-form.ask { display: flex; gap: 6px; margin-left: auto; flex: 0 1 460px; }
+/* ---- top bar ---- */
+.bar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--rule); }
+.bar-row { display: flex; align-items: center; gap: 18px; padding: 12px 0 6px; }
+.logo { font: 800 24px/1 var(--head); font-stretch: 80%; text-decoration: none; display: inline-flex; align-items: center; gap: 9px; }
+.logo svg { flex: none; }
+.org { font-size: 13px; color: var(--muted); line-height: 1.3; }
+.org b { font: 500 13px var(--mono); color: var(--ink); }
+form.ask { display: flex; gap: 6px; margin-left: auto; flex: 0 1 440px; }
 form.ask input { padding: 8px 12px; font-size: 15px; }
 form.ask button { padding: 8px 14px; }
-nav.tabs { display: flex; gap: 26px; overflow-x: auto; }
-nav.tabs a { text-decoration: none; padding: 9px 0 10px; border-bottom: 2px solid transparent; color: var(--muted); white-space: nowrap; font-weight: 500; }
+nav.tabs { display: flex; gap: 24px; overflow-x: auto; scrollbar-width: none; }
+nav.tabs a { text-decoration: none; padding: 8px 0 10px; border-bottom: 2px solid transparent; color: var(--muted); white-space: nowrap; font-weight: 500; font-size: 15px; }
 nav.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--ink); }
-.status { padding: 10px 0; border-bottom: 1px solid var(--rule); font-size: 15px; }
-.status b { font-weight: 600; }
 
-/* ---- views ---- */
-.view { padding: 28px 0 56px; }
-.view-head h1 { font-size: 26px; margin: 0; letter-spacing: -0.01em; font-weight: 600; }
-.view-head p { margin: 6px 0 0; color: var(--muted); max-width: 72ch; }
-.two { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 36px; margin-top: 24px; }
+.view { padding: 34px 0 64px; }
+.lede { font-size: 17px; color: var(--muted); max-width: 64ch; margin: 10px 0 0; }
+.small { font-size: 14px; } .tiny { font-size: 13px; color: var(--muted); }
+.empty { color: var(--muted); }
+.sec { margin-top: 44px; }
+.sec > h2 { font-size: 22px; font-weight: 700; }
+.sec > p.sub { margin: 4px 0 14px; color: var(--muted); font-size: 15px; max-width: 70ch; }
+
+/* ---- home ---- */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 520px); gap: 44px; align-items: start; }
+.hero h1 { font-size: clamp(32px, 4.4vw, 50px); line-height: 1.04; font-weight: 750; font-stretch: 78%; letter-spacing: -0.015em; }
+.hero h1 .n { color: var(--record); }
+.hero .lede { margin-top: 18px; }
+.hero .cta { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+.doors { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 52px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.door { padding: 22px 24px 24px 0; }
+.door + .door { padding-left: 24px; border-left: 1px solid var(--rule); }
+.door h2 { font-size: 21px; font-weight: 700; }
+.door h2 a { text-decoration: none; }
+.door h2 a:hover { text-decoration: underline; }
+.door p { margin: 6px 0 12px; color: var(--muted); font-size: 15px; }
+.door .stat { font: 700 15px var(--sans); color: var(--work); }
+.door form { display: flex; gap: 6px; }
+
+/* the OWNERS file: the record, with the evidence in the margin */
+.file { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.file .fname { font: 500 13px var(--mono); padding: 10px 14px; border-bottom: 1px solid var(--rule); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; align-items: baseline; }
+.file .fname b { font-weight: 500; word-break: break-all; }
+.file .fname span { color: var(--muted); font-family: var(--sans); font-size: 12.5px; }
+.ln { display: grid; grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1.05fr); border-bottom: 1px solid var(--faint); }
+.ln:last-child { border-bottom: 0; }
+.ln .sign { font: 500 13px/1.6 var(--mono); text-align: center; padding: 6px 0; color: var(--muted); }
+.ln pre { margin: 0; padding: 6px 12px 6px 4px; font: 13.5px/1.6 var(--mono); white-space: pre-wrap; word-break: break-word; }
+.ln .why { padding: 6px 14px; font-size: 13px; line-height: 1.5; color: var(--muted); border-left: 1px solid var(--faint); }
+.ln.ctx pre { color: var(--muted); }
+.ln.del { background: var(--record-bg); } .ln.del .sign, .ln.del pre { color: var(--record); }
+.ln.del pre s { text-decoration-thickness: 1.5px; }
+.ln.add { background: var(--work-bg); } .ln.add .sign, .ln.add pre { color: var(--work); }
+.file .foot { padding: 10px 14px; border-top: 1px solid var(--rule); display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: 13.5px; color: var(--muted); }
+
+/* approvers as dots: one per listed approver, plum if silent for a year */
+.dots { display: inline-flex; flex-wrap: wrap; gap: 3px; vertical-align: middle; max-width: 190px; }
+.dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--work); display: block; }
+.dots i.s { background: transparent; box-shadow: inset 0 0 0 2px var(--record); }
+.drifted { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 40px; }
+.drifted li { break-inside: avoid; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 14px; padding: 11px 0; border-top: 1px solid var(--rule); }
+.drifted .p { font: 500 14px var(--mono); word-break: break-all; }
+.drifted .m { grid-column: 1 / -1; font-size: 13.5px; color: var(--muted); }
+.legend { display: flex; gap: 18px; font-size: 13px; color: var(--muted); margin: 0 0 12px; flex-wrap: wrap; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---- graph trail: a path through the graph, read top to bottom ---- */
+.trail { list-style: none; margin: 14px 0 0; padding: 0; }
+.trail li { position: relative; padding: 0 0 14px 26px; }
+.trail li::before { content: ""; position: absolute; left: 5px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); }
+.trail li:not(:last-child)::after { content: ""; position: absolute; left: 9.5px; top: 18px; bottom: 2px; width: 1.5px; background: var(--rule); }
+.trail .node { font-weight: 600; }
+.trail .node.mono { font: 500 14px var(--mono); }
+.trail .edge { display: block; font-size: 13px; color: var(--muted); }
+.trail li.work::before { background: var(--work); }
+.trail li.record::before { background: transparent; box-shadow: inset 0 0 0 2px var(--record); }
+.trail li.record .node { color: var(--record); }
+.trail li.area::before { border-radius: 2px; background: var(--muted); }
+
+/* ---- find a reviewer ---- */
+.rev { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 40px; margin-top: 26px; align-items: start; }
 .panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; }
-.panel h2 { font-size: 16px; margin: 0 0 4px; }
+.panel label { font-weight: 600; display: block; }
 .row-actions { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
-.hint { font-size: 13.5px; color: var(--muted); margin: 8px 0 0; }
-h2.sec { font-size: 16px; margin: 0 0 2px; }
-p.sec-sub { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+.proofline { margin-top: 14px; font-size: 14px; color: var(--muted); }
+.proofline b { color: var(--work); }
+.pick { border-left: 3px solid var(--work); padding: 2px 0 2px 18px; }
+.pick .k { font-size: 14px; color: var(--muted); }
+.pick h2 { font-size: 30px; font-weight: 750; font-stretch: 80%; margin-top: 2px; }
+.pick h2 a { text-decoration-color: var(--rule); }
+.pick p { margin: 6px 0 0; max-width: 62ch; }
+.cross { margin: 18px 0 0; padding: 10px 14px; border-radius: 8px; background: var(--faint); font-size: 14.5px; }
+table.t { width: 100%; border-collapse: collapse; }
+table.t th { text-align: left; font-size: 13px; font-weight: 500; color: var(--muted); padding: 8px 10px 8px 0; border-bottom: 1px solid var(--rule); }
+table.t td { padding: 10px 10px 10px 0; border-bottom: 1px solid var(--rule); font-size: 14.5px; vertical-align: top; }
+table.t .n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.t td.p a { font: 500 13.5px var(--mono); word-break: break-all; }
+table.t tbody tr:hover td { background: color-mix(in srgb, var(--faint) 70%, transparent); }
+.quiet-owners { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.qo { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px 4px 8px; border-radius: 999px; background: var(--record-bg); color: var(--record); font-size: 14px; }
+.qo::before { content: ""; width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 2px currentColor; }
+details.how { margin-top: 28px; font-size: 14px; color: var(--muted); }
+details.how summary { cursor: pointer; }
+details.how table { border-collapse: collapse; margin-top: 8px; }
+details.how td { padding: 2px 16px 2px 0; font: 12.5px var(--mono); }
 
-.people { list-style: none; margin: 0; padding: 0; }
-.people li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 0; border-top: 1px solid var(--rule); }
-.people .who { font-weight: 600; }
-.people .meta { grid-column: 1 / -1; color: var(--muted); font-size: 13.5px; }
-.people .num { font-variant-numeric: tabular-nums; font-size: 14px; }
-.people li.silent .who, .people li.silent .num { color: var(--silent); }
-.meter { grid-column: 1 / -1; height: 4px; background: var(--mark); border-radius: 2px; overflow: hidden; }
-.meter span { display: block; height: 100%; background: var(--active); }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-.chip { font-family: var(--mono); font-size: 12.5px; padding: 1px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); }
-.chip.silent { color: var(--silent); border-color: var(--silent-bg); background: var(--silent-bg); }
-
-.chain { display: flex; flex-wrap: wrap; align-items: center; margin: 12px 0 0; padding: 0; list-style: none; row-gap: 8px; }
-.chain li { font-family: var(--mono); font-size: 13px; padding: 3px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); }
-.chain li + li { margin-left: 22px; position: relative; }
-.chain li + li::before { content: ""; position: absolute; left: -22px; top: 50%; width: 22px; border-top: 1.5px solid var(--muted); }
-details.trace { margin-top: 12px; font-size: 14px; color: var(--muted); }
-details.trace summary { cursor: pointer; }
-details.trace table { border-collapse: collapse; margin-top: 6px; }
-details.trace td { padding: 2px 14px 2px 0; font-family: var(--mono); font-size: 12.5px; }
-
-/* areas table */
+/* ---- areas ---- */
 .filters { display: flex; gap: 12px; align-items: center; margin-top: 22px; flex-wrap: wrap; }
-.filters input { max-width: 420px; }
+.filters input { max-width: 380px; }
 .seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
-.seg button { border: 0; border-radius: 0; background: transparent; color: var(--muted); font-weight: 500; padding: 7px 12px; font-size: 14px; }
+.seg button { border: 0; border-radius: 0; background: transparent; color: var(--muted); font-weight: 500; padding: 8px 12px; font-size: 14px; }
 .seg button + button { border-left: 1px solid var(--rule); }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
-table.areas { width: 100%; border-collapse: collapse; margin-top: 14px; }
-table.areas th { text-align: left; font-size: 13.5px; font-weight: 500; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--rule); }
-table.areas td { padding: 9px 10px; border-bottom: 1px solid var(--rule); font-size: 14.5px; vertical-align: top; }
-table.areas td.p a { font-family: var(--mono); font-size: 13.5px; word-break: break-all; }
-table.areas td.n { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
-table.areas th.n { text-align: right; }
-table.areas tr:hover td { background: var(--mark); }
-.state { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; white-space: nowrap; }
-.state::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-.state.drifting { color: var(--silent); } .state.drifting::before { background: var(--silent); }
-.state.healthy { color: var(--active); } .state.healthy::before { background: var(--active); }
 
-/* directory */
+/* ---- one area ---- */
 .back { font-size: 14px; color: var(--muted); }
-.dir-head h1 { font-family: var(--mono); font-size: 22px; font-weight: 500; margin: 6px 0 0; word-break: break-all; }
-.dir-head p { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
-.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 24px; }
+.area-head h1 { font: 500 clamp(20px, 2.6vw, 28px)/1.25 var(--mono); letter-spacing: 0; margin-top: 8px; word-break: break-all; }
+.area-head p { margin: 8px 0 0; font-size: 16px; }
+.chain { display: flex; flex-wrap: wrap; gap: 6px 0; margin: 12px 0 0; padding: 0; list-style: none; font: 13px var(--mono); color: var(--muted); }
+.chain li + li::before { content: "/"; margin: 0 6px; color: var(--rule); }
+.vs { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; margin-top: 30px; }
+.vs h2 { font-size: 20px; font-weight: 700; }
+.vs h2 .record, .vs h2 .work { font: inherit; }
+.vs > div > p { margin: 2px 0 10px; font-size: 14px; color: var(--muted); }
+.people { list-style: none; margin: 0; padding: 0; }
+.people li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 12px; padding: 10px 0; border-top: 1px solid var(--rule); }
+.people .who { font-weight: 600; }
+.people .num { font-variant-numeric: tabular-nums; font-size: 14px; }
+.people .meta { grid-column: 1 / -1; color: var(--muted); font-size: 13.5px; }
+.people li.silent .who, .people li.silent .num { color: var(--record); }
+.bar1 { grid-column: 1 / -1; height: 3px; background: var(--faint); border-radius: 2px; overflow: hidden; margin: 3px 0 1px; }
+.bar1 span { display: block; height: 100%; background: var(--work); }
+.people li.silent .bar1 span { background: var(--record); }
 .levels { margin: 12px 0 0; font-size: 14px; color: var(--muted); }
 .levels summary { cursor: pointer; }
 .levels ol { margin: 8px 0 0; padding-left: 20px; }
+.levels li { margin: 2px 0; }
+.groupmap { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 32px; align-items: center; }
+.groupmap svg { width: 100%; height: auto; display: block; }
+.groupmap svg a:focus-visible circle { stroke: var(--focus); stroke-width: 3; }
+.gm-edge { stroke: var(--work); stroke-opacity: .5; }
+.gm-node { fill: var(--sheet); stroke: var(--work); stroke-width: 2; }
+.gm-center { fill: var(--work); }
+.gm-label { font: 500 12px var(--mono); fill: var(--ink); }
+.gm-count { font: 600 11px var(--sans); fill: var(--muted); }
 
-/* the OWNERS file */
-.file { margin-top: 32px; }
-.diff { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
-.diff .fname { font-family: var(--mono); font-size: 13px; color: var(--muted); padding: 8px 14px; border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; gap: 12px; }
-.line { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); border-bottom: 1px solid var(--rule); }
-.line:last-child { border-bottom: 0; }
-.line pre { margin: 0; padding: 7px 14px; font: 13.5px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; }
-.line.del pre { background: var(--silent-bg); color: var(--silent); text-decoration: line-through; text-decoration-thickness: 1px; }
-.line.add pre { background: var(--active-bg); color: var(--active); }
-.line .why { padding: 7px 14px; font-size: 13.5px; color: var(--muted); border-left: 1px solid var(--rule); }
-.notes { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+.tabs2 { display: flex; gap: 4px; margin-top: 40px; border-bottom: 1px solid var(--rule); overflow-x: auto; scrollbar-width: none; }
+.tabs2 button { background: transparent; color: var(--muted); border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 10px 14px 11px; font: 600 16px var(--head); font-stretch: 85%; white-space: nowrap; }
+.tabs2 button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+.tabs2 button:first-child { padding-left: 0; }
+.tabpanel { padding-top: 18px; }
+.tabpanel > p.sub { margin: 0 0 14px; color: var(--muted); font-size: 15px; max-width: 70ch; }
+.more { margin-top: 6px; }
+.chainlist { list-style: none; margin: 0; padding: 0; }
+.chainlist li { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 4px 18px; padding: 9px 0; border-top: 1px solid var(--rule); font-size: 14.5px; }
+.chainlist code { word-break: break-all; }
 
-/* cleanup queue */
+/* what-if: where an approval request is routed, before and after */
+.route { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); overflow: hidden; margin-top: 10px; }
+.route > div { padding: 12px 14px; }
+.route > div + div { border-left: 1px solid var(--rule); }
+.route .lbl { font-size: 12.5px; color: var(--muted); display: block; margin-bottom: 4px; }
+.route .to { font: 500 13.5px var(--mono); word-break: break-all; }
+.route .st { font-size: 13.5px; margin-top: 4px; }
+.route .trail { margin-top: 8px; }
+.dots i.x { background: transparent; box-shadow: inset 0 0 0 2px var(--muted); opacity: .45; position: relative; }
+.check { display: grid; grid-template-columns: repeat(3, auto) 1fr; gap: 0 28px; align-items: end; padding: 16px 18px; border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); margin-top: 22px; }
+.check .k { font: 750 34px/1 var(--head); font-stretch: 80%; }
+.check .l { font-size: 13.5px; color: var(--muted); margin-top: 4px; }
+.check .side { justify-self: end; text-align: right; font-size: 14px; color: var(--muted); max-width: 40ch; }
+.wi-pick { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 6px 0 12px; }
+.wi-pick label { display: inline-flex; gap: 6px; align-items: center; font-size: 14.5px; cursor: pointer; }
+.wi-pick input { accent-color: var(--ink); }
+.wi-row { margin-top: 18px; }
+.wi-row h3 { font: 500 14.5px var(--mono); letter-spacing: 0; }
+
+/* evidence graph: the nodes an answer actually used, in columns */
+.eg { margin-top: 30px; }
+.eg .scroll { overflow-x: auto; margin-top: 8px; }
+.eg svg { width: 100%; min-width: 720px; height: auto; display: block; }
+.eg .edge { fill: none; stroke: var(--rule); stroke-width: 1.4; }
+.eg .edge.hot { stroke: var(--work); stroke-opacity: .55; stroke-width: 1.8; }
+.eg .edge.rec { stroke: var(--record); stroke-opacity: .5; stroke-dasharray: 3 3; }
+.eg rect { fill: var(--sheet); stroke: var(--rule); stroke-width: 1; }
+.eg .person rect { stroke: var(--work); stroke-width: 1.6; }
+.eg .person.top rect { fill: var(--work-bg); }
+.eg .area rect { fill: var(--faint); }
+.eg .owner rect { stroke: var(--record); fill: var(--record-bg); }
+.eg .owner.active rect { stroke: var(--rule); fill: var(--sheet); }
+.eg text { font: 500 12px var(--mono); fill: var(--ink); }
+.eg .person text { font: 600 12.5px var(--sans); }
+.eg .owner text { fill: var(--record); }
+.eg .owner.active text { fill: var(--muted); }
+.eg .col { font: 500 12px var(--sans); fill: var(--muted); }
+.eg a:focus-visible rect { stroke: var(--focus); stroke-width: 2.5; }
+
+/* ---- fix the records ---- */
 .queue-bar { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 22px;
-  padding: 12px 14px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; position: sticky; top: 118px; z-index: 5; }
+  padding: 12px 14px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; position: sticky; top: 98px; z-index: 5; }
 .queue-bar label { display: inline-flex; gap: 8px; align-items: center; font-size: 14.5px; cursor: pointer; }
-.queue { list-style: none; margin: 16px 0 0; padding: 0; }
-.queue > li { border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); margin-bottom: 10px; }
-.q-head { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; padding: 12px 14px; }
-.q-head input { margin-top: 5px; width: 16px; height: 16px; accent-color: var(--ink); }
-.q-head .p { font-family: var(--mono); font-size: 14px; word-break: break-all; }
-.q-head .what { font-size: 14px; color: var(--muted); }
-.q-body { border-top: 1px solid var(--rule); padding: 10px 14px 12px 42px; font-size: 14px; }
-.q-body ul { margin: 0; padding-left: 18px; }
-.q-body li { margin: 3px 0; }
-.cmd { font-family: var(--mono); font-size: 13px; background: var(--mark); padding: 2px 6px; border-radius: 4px; }
+.cmd { font: 13px var(--mono); background: var(--faint); padding: 2px 6px; border-radius: 4px; }
+.queue { list-style: none; margin: 14px 0 0; padding: 0; }
+.queue > li { border-top: 1px solid var(--rule); }
+.q-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 14px 0; }
+.q-head input { margin-top: 4px; width: 17px; height: 17px; accent-color: var(--ink); }
+.q-head .p { font: 500 14.5px var(--mono); word-break: break-all; }
+.q-head .what { font-size: 14px; margin-top: 3px; }
+.q-body { padding: 0 0 18px 31px; }
 
-/* proof */
-.findings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-top: 24px; }
-.findings p { margin: 0; font-size: 18px; }
-.findings .src { display: block; margin-top: 6px; color: var(--muted); font-size: 14px; }
-.method { margin-top: 32px; max-width: 72ch; }
-.method h2 { font-size: 16px; margin: 22px 0 4px; }
+/* ---- how we know ---- */
+.results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-top: 26px; border-top: 1px solid var(--rule); }
+.results > div { padding: 20px 22px 22px 0; }
+.results > div + div { padding-left: 22px; border-left: 1px solid var(--rule); }
+.results .big { font: 750 44px/1 var(--head); font-stretch: 80%; color: var(--work); }
+.results .vsn { font: 600 18px var(--head); font-stretch: 85%; color: var(--muted); margin-top: 6px; }
+.results p { margin: 10px 0 0; font-size: 15px; }
+.results h3 { font-size: 17px; font-weight: 700; margin-top: 14px; }
+table.t caption { text-align: left; color: var(--muted); font-size: 14px; padding-bottom: 8px; }
+.results details { margin-top: 12px; font-size: 14px; }
+.results details summary { cursor: pointer; color: var(--muted); }
+.results details table { margin-top: 8px; }
+.fine { max-width: 72ch; margin-top: 36px; }
+.fine > h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+.fine details { border-top: 1px solid var(--rule); padding: 10px 0; }
+.fine details:last-child { border-bottom: 1px solid var(--rule); }
+.fine summary { cursor: pointer; font-weight: 600; }
+.fine details p { color: var(--muted); margin: 8px 0 2px; }
+.method { max-width: 72ch; }
+.method h3 { font-size: 18px; font-weight: 700; margin-top: 26px; }
 .method p, .method li { color: var(--muted); }
 
-/* ask drawer */
+/* ---- ask drawer ---- */
 .shade { position: fixed; inset: 0; background: var(--shade); z-index: 40; }
-.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(500px, 100%); background: var(--sheet); border-left: 1px solid var(--rule);
-  z-index: 41; display: flex; flex-direction: column; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100%); background: var(--sheet); border-left: 1px solid var(--rule); z-index: 41; display: flex; flex-direction: column; }
 .drawer[hidden], .shade[hidden] { display: none; }
 .drawer header { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--rule); }
-.drawer header h2 { font-size: 16px; margin: 0; }
-.drawer .body { padding: 18px; overflow-y: auto; }
-.drawer .q { font-weight: 600; margin: 0 0 8px; }
-.drawer .a { font-size: 17px; margin: 0; }
-.drawer .how { color: var(--muted); font-size: 13.5px; margin: 10px 0 0; }
-.tag { display: inline-block; font-size: 12.5px; padding: 1px 8px; border-radius: 999px; background: var(--mark); color: var(--ink); }
-.tag.unknown_entity, .tag.not_in_graph { background: var(--silent-bg); color: var(--silent); }
+.drawer header h2 { font-size: 18px; font-weight: 700; }
+.drawer .body { padding: 20px; overflow-y: auto; }
+.drawer .q { color: var(--muted); margin: 0 0 6px; }
+.drawer .a { font-size: 18px; line-height: 1.5; margin: 0; }
 .drawer .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.memory { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
-.drawer hr { border: 0; border-top: 1px solid var(--rule); margin: 18px 0; }
+.drawer hr { border: 0; border-top: 1px solid var(--rule); margin: 20px 0; }
+.memory { font-size: 14px; color: var(--muted); margin: 14px 0 0; padding-left: 12px; border-left: 2px solid var(--rule); }
 
-footer { border-top: 1px solid var(--rule); padding: 18px 0 40px; color: var(--muted); font-size: 14px; }
+footer { border-top: 1px solid var(--rule); padding: 20px 0 44px; color: var(--muted); font-size: 14px; }
+footer p { margin: 0; max-width: 90ch; }
 
-@media (max-width: 900px) {
-  .two, .cols, .findings { grid-template-columns: 1fr; }
-  .line { grid-template-columns: 1fr; }
-  .line .why { border-left: 0; border-top: 1px dashed var(--rule); }
+@media (max-width: 920px) {
+  .route { grid-template-columns: 1fr; } .route > div + div { border-left: 0; border-top: 1px solid var(--rule); }
+  .check { grid-template-columns: repeat(3, auto); } .check .side { grid-column: 1 / -1; justify-self: start; text-align: left; margin-top: 10px; }
+  .chainlist li { grid-template-columns: 1fr; }
+  .hero, .rev, .vs, .groupmap { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .doors, .results { grid-template-columns: 1fr; }
+  .door + .door, .results > div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--rule); }
+  .drifted { columns: 1; }
+  .ln { grid-template-columns: 20px minmax(0, 1fr); }
+  .ln .why { grid-column: 2; border-left: 0; padding: 0 12px 8px 4px; }
   .bar-row { flex-wrap: wrap; }
-  form.ask { flex: 1 1 100%; margin-left: 0; }
+  form.ask { flex: 1 1 100%; margin-left: 0; order: 3; }
   .queue-bar { position: static; }
-  table.areas .hide-sm { display: none; }
+  .hide-sm { display: none; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .drawer:not([hidden]) { animation: slide .16s ease-out; }
-  @keyframes slide { from { transform: translateX(16px); opacity: .6; } to { transform: none; opacity: 1; } }
+  .drawer:not([hidden]) { animation: slide .18s ease-out; }
+  @keyframes slide { from { transform: translateX(18px); opacity: .6; } to { transform: none; opacity: 1; } }
+  .hero .file .ln.del pre s { animation: strike .9s .5s ease-out both; }
+  @keyframes strike { from { text-decoration-color: transparent; } to { text-decoration-color: currentColor; } }
 }
 </style>
 </head>
@@ -192,31 +319,33 @@ footer { border-top: 1px solid var(--rule); padding: 18px 0 40px; color: var(--m
 <div class="bar">
   <div class="wrap">
     <div class="bar-row">
-      <a class="logo" href="#/reviewer">Drift</a>
-      <div class="org"><span class="name">kubernetes/kubernetes</span><span class="fresh" id="fresh">Loading…</span></div>
+      <a class="logo" href="#/" aria-label="Drift, home">
+        <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="6" cy="6" r="4" fill="none" stroke="var(--record)" stroke-width="2"/><circle cx="16" cy="16" r="4.5" fill="var(--work)"/><path d="M9 9 L13 13" stroke="var(--muted)" stroke-width="1.6" stroke-dasharray="2 2"/></svg>
+        Drift</a>
+      <div class="org"><b>kubernetes/kubernetes</b><br><span id="fresh">Loading…</span></div>
       <form class="ask" id="ask" role="search">
-        <input type="text" id="q" aria-label="Ask Drift" placeholder="Ask: who really works on pkg/kubelet?" autocomplete="off">
+        <input type="text" id="q" aria-label="Ask Drift a question" placeholder="Ask, e.g. who really works on pkg/kubelet?" autocomplete="off">
         <button type="submit">Ask</button>
       </form>
     </div>
     <nav class="tabs" aria-label="Sections">
+      <a href="#/" data-tab="home">Overview</a>
       <a href="#/reviewer" data-tab="reviewer">Find a reviewer</a>
       <a href="#/areas" data-tab="areas">Areas</a>
-      <a href="#/cleanup" data-tab="cleanup">Cleanup queue</a>
+      <a href="#/fix" data-tab="fix">Fix the records</a>
       <a href="#/proof" data-tab="proof">How we know</a>
     </nav>
   </div>
 </div>
-<div class="status"><div class="wrap" id="status">Reading the ownership records…</div></div>
 
-<div class="wrap"><div id="view" class="view"></div></div>
+<main class="wrap"><div id="view" class="view"></div></main>
 
-<footer><div class="wrap">Drift compares Kubernetes' OWNERS files with merged pull requests, reviews, <code>/lgtm</code> and <code>/approve</code>
-  in kubernetes/kubernetes. Activity in other repositories isn't counted, so "silent" means silent here, not gone.
-  Only public GitHub handles are stored. Runs on FalkorDB.</div></footer>
+<footer><div class="wrap"><p>Drift compares Kubernetes' OWNERS files with the merged pull requests, reviews, <code>/lgtm</code> and <code>/approve</code>
+  commands in kubernetes/kubernetes. Work in other repositories isn't counted, so "silent" means silent here, not gone.
+  Only public GitHub handles are stored. Drift never edits Kubernetes: every change is a draft for a maintainer. Runs on FalkorDB.</p></div></footer>
 
 <div class="shade" id="shade" hidden></div>
-<aside class="drawer" id="drawer" hidden aria-label="Answer">
+<aside class="drawer" id="drawer" hidden aria-label="Answer" role="dialog" aria-modal="true">
   <header><h2>Ask Drift</h2><button type="button" class="quiet" id="close">Close</button></header>
   <div class="body" id="drawer-body"></div>
 </aside>
@@ -225,58 +354,214 @@ footer { border-top: 1px solid var(--rule); padding: 18px 0 40px; color: var(--m
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const gh = (h) => `<a href="https://github.com/${esc(h)}" target="_blank" rel="noopener">@${esc(h)}</a>`;
-const pr = (n) => `<a class="mono" href="https://github.com/kubernetes/kubernetes/pull/${esc(n)}" target="_blank" rel="noopener">#${esc(n)}</a>`;
+const pr = (n) => `<a href="https://github.com/kubernetes/kubernetes/pull/${esc(n)}" target="_blank" rel="noopener">#${esc(n)}</a>`;
 const areaLink = (p) => `<a href="#/area/${encodeURIComponent(p)}">${esc(p)}</a>`;
 const linkify = (t) => esc(t).replace(/@([A-Za-z0-9][A-Za-z0-9-]*)/g, (_, h) => gh(h)).replace(/#(\d{5,7})\b/g, (_, n) => pr(n));
+const pct = (x) => Math.round(x * 100) + "%";
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const day = (iso) => { const [y, m, d] = String(iso).slice(0, 10).split("-").map(Number); return y ? `${MONTHS[m - 1]} ${d}, ${y}` : esc(iso); };
 const HOW = { AUTHORED_PR: "wrote", REVIEWED: "reviewed", LGTM: "/lgtm", APPROVED_PR: "/approve" };
-const OUTCOME = { answered_with_path: "answered with a path", answered_from_memory: "answered from memory", not_in_graph: "not in the graph", unknown_entity: "unknown name" };
+const dots = (n, silent) => `<span class="dots" role="img" aria-label="${silent} of ${n} approvers silent">${
+  Array.from({ length: Math.min(n, 40) }, (_, i) => `<i class="${i < silent ? "s" : ""}"></i>`).join("")}</span>`;
 const session = (() => { try { let s = localStorage.getItem("drift-session"); if (!s) { s = Math.random().toString(36).slice(2, 10); localStorage.setItem("drift-session", s); } return s; } catch { return "web"; } })();
 const state = { areas: null, queue: null, summary: null, picked: new Set() };
 
 async function api(url, opts) {
   const r = await fetch(url, opts);
-  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Request failed (${r.status})`);
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `The server answered ${r.status}`);
   return r;
 }
 const getJSON = async (u, o) => (await api(u, o)).json();
 const post = (u, body) => getJSON(u, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-const chain = (paths) => (paths || []).slice(0, 3).map((p) => `<ol class="chain">${p.map((n) => `<li>${esc(n)}</li>`).join("")}</ol>`).join("");
-const trace = (t) => !t || !t.length ? "" : `<details class="trace"><summary>${t.length} graph queries, ${t.reduce((a, x) => a + x.ms, 0).toFixed(0)} ms</summary><table>${
-  t.map((x) => `<tr><td>${esc(x.query)}</td><td>${x.ms} ms</td><td>${x.rows} rows</td></tr>`).join("")}</table></details>`;
-const fail = (el, err) => { el.innerHTML = `<p class="empty">${esc(err.message)}. Check that FalkorDB is running and the graph is built.</p>`; };
+const summary = async () => state.summary || (state.summary = await getJSON("/api/summary"));
+const queue = async () => state.queue || (state.queue = (await getJSON("/api/cleanup")).data);
+const fail = (el, err) => { el.innerHTML = `<p class="empty">${esc(err.message)}. If the site was asleep, give it a minute and reload.</p>`; };
+const how = (r, extra = "") => {
+  const t = r.trace || [];
+  return `<details class="how"><summary>How this was answered</summary>${extra}
+    ${t.length ? `<p>${t.length} graph queries in ${t.reduce((a, x) => a + x.ms, 0).toFixed(0)} ms, all fixed and parameterised (the model never writes Cypher):</p>
+    <table>${t.map((x) => `<tr><td>${esc(x.query)}</td><td>${x.ms} ms</td><td>${x.rows} rows</td></tr>`).join("")}</table>` : ""}</details>`;
+};
+
+// A path through the graph, read top to bottom. Each step: [node html, edge label, kind].
+const trail = (steps) => `<ol class="trail">${steps.map(([node, edge, kind = "", mono = false]) =>
+  `<li class="${kind}"><span class="node${mono ? " mono" : ""}">${node}</span>${edge ? `<span class="edge">${edge}</span>` : ""}</li>`).join("")}</ol>`;
+// Paths from the API are lists of strings such as ["@x", "reviewed PR #123", "pkg/kubelet"].
+const trailFromPath = (p) => {
+  const steps = [];
+  p.forEach((s) => {
+    const isDir = /^[a-z_.]+(\/|$)/.test(s) && !s.includes(" ");
+    const m = s.match(/^(.+?) (PR #\d+)$/);            // "reviewed PR #123": the verb is the edge
+    if (/^PR #\d+$/.test(s) && steps.length) { steps[steps.length - 1][1] = "worked on"; steps.push([linkify(s), "which changed files in", ""]); return; }
+    if (m && steps.length) { steps[steps.length - 1][1] = m[1]; steps.push([linkify(m[2]), "which changed files in", ""]); return; }
+    if (s.startsWith("same people as ")) { steps[steps.length - 1][1] = "shares its people with"; steps.push([areaLink(s.slice(15).split(" (")[0]), "", "area", true]); return; }
+    steps.push([isDir ? areaLink(s) : linkify(s), "", s.startsWith("@") ? "work" : isDir ? "area" : "", isDir]);
+  });
+  if (steps.length && steps[steps.length - 1][1] === "which changed files in") steps[steps.length - 1][1] = "";
+  return trail(steps);
+};
+
+// The OWNERS file as a record, with the evidence for each changed line in the margin.
+function ownersFile(d, opts = {}) {
+  const ev = d.evidence || [], rows = [];
+  const why = (i) => linkify("@" + ev[i]).replace(/ in kubernetes\/kubernetes/, "");
+  if (d.remove.length) {
+    rows.push(`<div class="ln ctx"><span class="sign"></span><pre>approvers:</pre><div class="why"></div></div>`);
+    d.remove.forEach((h, i) => rows.push(`<div class="ln del"><span class="sign">−</span><pre>  - <s>${esc(h)}</s></pre><div class="why">${why(i)}</div></div>`));
+    rows.push(`<div class="ln ctx"><span class="sign"></span><pre>emeritus_approvers:</pre><div class="why"></div></div>`);
+    d.remove.forEach((h) => rows.push(`<div class="ln add"><span class="sign">+</span><pre>  - ${esc(h)}</pre><div class="why">Keeps the record of who owned this.</div></div>`));
+  }
+  if (d.add_reviewers.length) {
+    rows.push(`<div class="ln ctx"><span class="sign"></span><pre>reviewers:</pre><div class="why"></div></div>`);
+    d.add_reviewers.forEach((h, j) => rows.push(`<div class="ln add"><span class="sign">+</span><pre>  - ${esc(h)}</pre><div class="why">${why(d.remove.length + j)}</div></div>`));
+  }
+  const src = `https://github.com/kubernetes/kubernetes/blob/master/${d.dir === "." ? "" : esc(d.dir) + "/"}OWNERS`;
+  return `<div class="file"><div class="fname"><b>${opts.link ? areaLink(d.dir) : esc(d.dir)}/OWNERS</b> <span>drafted change · <a href="${src}" target="_blank" rel="noopener">current file</a></span></div>
+    ${rows.join("")}${opts.foot ? `<div class="foot">${opts.foot}</div>` : ""}</div>`;
+}
+
+// ---- evidence graph -------------------------------------------------------------------------
+// cols: [{title, nodes: [{id, label, cls, href, title}]}]; edges: [[fromId, toId, cls]]. Laid out in columns, left to right.
+function evidenceGraph(cols, edges) {
+  const W = 1000, colW = W / cols.length, rowH = 34, top = 30, nodeW = colW - 46;
+  const H = top + rowH * Math.max(...cols.map((c) => c.nodes.length)) + 6;
+  const pos = {};
+  cols.forEach((c, i) => {
+    const pad = (H - top - rowH * c.nodes.length) / 2;
+    c.nodes.forEach((n, j) => { pos[n.id] = { x: i * colW + 8, y: top + pad + j * rowH, w: nodeW }; });
+  });
+  const fit = (t, w) => { const max = Math.floor((w - 16) / 7.3); return t.length > max ? "…" + t.slice(-(max - 1)) : t; };
+  const ed = edges.filter(([a, b]) => pos[a] && pos[b]).map(([a, b, cls = ""]) => {
+    const p = pos[a], q = pos[b], x1 = p.x + p.w, y1 = p.y + 13, x2 = q.x, y2 = q.y + 13, mx = (x1 + x2) / 2;
+    return `<path class="edge ${cls}" d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}"/>`;
+  }).join("");
+  const nodes = cols.map((c) => c.nodes.map((n) => { const p = pos[n.id];
+    const body = `<rect x="${p.x}" y="${p.y}" width="${p.w}" height="26" rx="6"/><text x="${p.x + 9}" y="${p.y + 17.5}">${esc(fit(n.label, p.w))}</text>`;
+    return `<g class="${n.cls || ""}">${n.href ? `<a href="${esc(n.href)}"${n.href.startsWith("http") ? ' target="_blank" rel="noopener"' : ""}><title>${esc(n.title || n.label)}</title>${body}</a>` : `<title>${esc(n.title || n.label)}</title>${body}`}</g>`; }).join("")).join("");
+  const heads = cols.map((c, i) => `<text class="col" x="${i * colW + 8}" y="14">${esc(c.title)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="The people, pull requests, areas and listed owners behind this answer">${heads}${ed}${nodes}</svg>`;
+}
+function reviewerGraph(d) {
+  const people = d.people.slice(0, 3), prs = [], areas = [], owners = [], edges = [];
+  const add = (list, n) => { if (!list.find((x) => x.id === n.id)) list.push(n); };
+  people.forEach((p, i) => Object.entries(p.by_area || {}).forEach(([dir, nums]) => {
+    nums.slice(0, i === 0 ? 2 : 1).forEach((n) => {
+      add(prs, { id: "pr" + n, label: "#" + n, href: `https://github.com/kubernetes/kubernetes/pull/${n}`, title: `PR #${n}` });
+      edges.push(["p" + p.handle, "pr" + n, i === 0 ? "hot" : ""], ["pr" + n, "a" + dir, i === 0 ? "hot" : ""]);
+    });
+    add(areas, { id: "a" + dir, label: dir, cls: "area", href: "#/area/" + encodeURIComponent(dir), title: dir });
+  }));
+  d.areas.filter((a) => areas.find((x) => x.id === "a" + a.dir)).forEach((a) => a.silent_approvers.slice(0, 2).forEach((h) => {
+    add(owners, { id: "o" + h, label: "@" + h, cls: "owner", href: "https://github.com/" + h, title: `@${h}: listed approver, silent for a year` });
+    edges.push(["a" + a.dir, "o" + h, "rec"]);
+  }));
+  if (prs.length > 9) prs.length = 9;
+  return evidenceGraph([
+    { title: "Who to ask", nodes: people.map((p, i) => ({ id: "p" + p.handle, label: "@" + p.handle, cls: "person" + (i === 0 ? " top" : ""), href: "https://github.com/" + p.handle })) },
+    { title: "Pull requests they reviewed", nodes: prs },
+    { title: "Areas of your change", nodes: areas },
+    ...(owners.length ? [{ title: "Listed approvers, silent a year", nodes: owners.slice(0, 8) }] : []),
+  ], edges);
+}
+
+// ---- what-if rendering ----------------------------------------------------------------------
+// One dot per approver listed at the level a request is routed to: filled = active, hollow = silent, faded = stepped back.
+const routeDots = (side) => `<span class="dots">${side.listed.map((h) =>
+  `<i class="${side.active.includes(h) ? "" : "s"}" title="@${esc(h)}${side.active.includes(h) ? " (active)" : " (silent for a year)"}"></i>`).join("")}</span>`;
+const STATE = { covered: "Reaches an active approver", stuck: "Waits on silent approvers only", none: "No approver anywhere up the chain" };
+function routeCompare(row, removed = []) {
+  const side = (label, x) => `<div><span class="lbl">${label}</span>
+    ${x.routed_to ? `<div class="to">${areaLink(x.routed_to)}${x.routed_to === row.dir ? "" : " <span class=\"tiny\">(inherited)</span>"}</div>${routeDots(x)}` : `<div class="to">nowhere</div>`}
+    <div class="st ${x.state === "covered" ? "work" : "record"}">${STATE[x.state]}${x.active.length ? `: ${x.active.slice(0, 3).map(gh).join(", ")}${x.active.length > 3 ? ` and ${x.active.length - 3} more` : ""}` : ""}</div></div>`;
+  return `<div class="route">${side("Today, approval requests go to", row.before)}${side("After the change", row.after)}</div>`;
+}
+function whatIfHtml(r, opts = {}) {
+  if (r.outcome !== "answered_with_path") return `<p>${linkify(r.text || r.note)}</p>`;
+  const d = r.data, removed = d.people || [];
+  const rows = (list, title, sub, n = 3) => list.length ? `<section class="wi-row"><h2 style="font-size:18px">${title}</h2><p class="tiny" style="margin:2px 0 0">${sub}</p>
+    ${list.slice(0, n).map((x) => `<div class="wi-row"><h3>${areaLink(x.dir)} <span class="tiny">${x.prs} PRs in the last year</span></h3>${routeCompare(x, removed)}
+      ${x.could_cover && x.could_cover.length ? `<p class="tiny">Already reviewing here: ${x.could_cover.map((c) => `${gh(c.handle)} (${c.prs} PRs)`).join(", ")}</p>` : ""}</div>`).join("")}
+    ${list.length > n ? `<p class="tiny">And ${list.length - n} more: ${list.slice(n, n + 8).map((x) => areaLink(x.dir)).join(", ")}${list.length > n + 8 ? "…" : ""}</p>` : ""}</section>` : "";
+  return `${opts.noText ? "" : `<p class="a" style="font-size:17px;margin:0">${linkify(r.text)}</p>`}
+    ${rows(d.stuck, "Would get stuck", "Approval requests would only reach approvers who've been silent for a year.")}
+    ${rows(d.fixed, "Would get unstuck", "Today these only reach silent approvers; afterwards they fall through to active ones.", 2)}
+    ${rows(d.moved, "Approval moves up the chain", "Still reaches an active approver, one or more levels higher.", 2)}
+    <p class="tiny" style="margin-top:16px">Simulated on a copy of the graph made with FalkorDB's <code>GRAPH.COPY</code>, then deleted. The live graph was not changed.</p>
+    ${opts.noHow ? "" : how(r)}`;
+}
 
 // ---- routing ------------------------------------------------------------------------------
-const routes = { reviewer: viewReviewer, areas: viewAreas, area: viewArea, cleanup: viewCleanup, proof: viewProof };
+const routes = { "": viewHome, reviewer: viewReviewer, areas: viewAreas, area: viewArea, fix: viewFix, cleanup: viewFix, proof: viewProof };
 function route() {
-  const [, name = "reviewer", ...rest] = location.hash.split("/");
-  const fn = routes[name] || viewReviewer;
-  document.querySelectorAll("nav.tabs a").forEach((a) => a.setAttribute("aria-current", a.dataset.tab === (name === "area" ? "areas" : name) ? "page" : "false"));
+  const [, name = "", ...rest] = location.hash.split("/");
+  const fn = routes[name] || viewHome;
+  const tab = name === "area" ? "areas" : name === "cleanup" ? "fix" : name || "home";
+  document.querySelectorAll("nav.tabs a").forEach((a) => a.setAttribute("aria-current", a.dataset.tab === tab ? "page" : "false"));
   fn(decodeURIComponent(rest.join("/")));
   window.scrollTo(0, 0);
 }
 window.addEventListener("hashchange", route);
 
+// ---- overview -----------------------------------------------------------------------------
+async function viewHome() {
+  const v = $("#view");
+  v.innerHTML = `<p class="empty">Reading the ownership records…</p>`;
+  let sm;
+  try { sm = await summary(); } catch (err) { return fail(v, err); }
+  const s = sm.summary.data, ev = sm.reviewer_eval;
+  v.innerHTML = `<section class="hero">
+      <div><h1><span class="n">${s.silent} of Kubernetes' ${s.approvers} approvers</span> haven't reviewed, approved or merged anything here in a year. The OWNERS files still list them.</h1>
+        <p class="lede">Drift puts who the records say owns the code next to who actually reviews it, finds the right reviewer for a change, and drafts the fix to the record, with the evidence for every line.</p>
+        <div class="cta"><a class="btn" href="#/reviewer">Find a reviewer</a><a class="btn quiet" href="#/fix">See the drafted fixes</a></div></div>
+      <div id="hero-file"><p class="empty">Drafting a fix…</p></div>
+    </section>
+    <section class="doors" aria-label="What you can do">
+      <div class="door"><h2><a href="#/reviewer">Find a reviewer</a></h2><p>Paste the files you changed. Get the people who actually review that code now, with their recent PRs as evidence.</p>
+        ${ev ? `<span class="stat">Right ${pct(ev.approver["drift@3"].rate)} of the time, against ${pct(ev.approver["owners@3_random"].rate)} from the OWNERS files</span>` : ""}</div>
+      <div class="door"><h2><a href="#/fix">Fix the records</a></h2><p>Drafted OWNERS changes for the areas that drifted most. Tick the ones you agree with and download one patch.</p>
+        <span class="stat" id="fix-stat"></span></div>
+      <div class="door"><h2><a href="#/areas">Look up an area</a></h2><p>Who's listed, who does the work, and which areas share the same people.</p>
+        <form id="area-go"><input type="search" id="area-q" aria-label="Directory" placeholder="pkg/kubelet/cm/cpumanager"><button type="submit">Open</button></form></div>
+    </section>
+    <section class="sec"><h2>Where the records drifted most</h2>
+      <p class="sub">Areas where listed approvers have been silent for a year, weighted by how much work merged there since ${day(s.since)}.</p>
+      <div class="legend"><span>${dots(2, 0)} active approver</span><span>${dots(1, 1)} silent for a year</span></div>
+      <ul class="drifted">${s.worst_dirs.slice(0, 8).map((d) => `<li><span class="p">${areaLink(d.dir)}</span>${dots(d.approvers, d.silent)}
+        <span class="m">${d.silent} of ${d.approvers} listed approvers silent · ${d.prs} PRs merged in the year</span></li>`).join("")}</ul></section>`;
+  $("#area-go").onsubmit = (e) => { e.preventDefault(); const q = $("#area-q").value.trim(); if (q) location.hash = "#/area/" + encodeURIComponent(q); };
+  try {
+    const q = await queue();
+    const best = q.queue.find((x) => x.remove.length && x.remove.length <= 2 && x.add_reviewers.length) || q.queue[0];
+    $("#fix-stat").textContent = `${q.queue.length} fixes drafted`;
+    post("/api/checkfix", { dirs: q.queue.map((x) => x.dir) }).then((r) => {
+      if (r.outcome === "answered_with_path") $("#fix-stat").textContent = `${q.queue.length} fixes drafted. Checked on a copy of the graph: they unstick ${r.data.fixed.length} areas and break none.`;
+    }).catch(() => {});
+    if (best) $("#hero-file").innerHTML = ownersFile(best, { link: true, foot: `<span>Drafted from activity up to ${day(q.as_of)}. Drift never edits Kubernetes.</span><a href="#/area/${encodeURIComponent(best.dir)}">Open this area</a>` });
+  } catch (err) { $("#hero-file").innerHTML = ""; }
+}
+
 // ---- find a reviewer ----------------------------------------------------------------------
 const EXAMPLE_FILES = "pkg/kubelet/cm/cpumanager/policy_static.go\npkg/kubelet/cm/memorymanager/policy_static.go\npkg/kubelet/kubelet.go";
-function viewReviewer() {
+async function viewReviewer() {
   const v = $("#view");
-  v.innerHTML = `<div class="view-head"><h1>Find a reviewer</h1>
-      <p>Paste the files your change touches. Drift finds the people who actually review that code now, and tells you which listed owners have gone quiet.</p>
-      <p class="hint" id="rev-proof"></p></div>
-    <div class="two">
+  v.innerHTML = `<h1 style="font-size:34px;font-weight:750;font-stretch:80%">Find a reviewer</h1>
+    <p class="lede">Paste the files your change touches. Drift finds the people who review that code now, and flags listed owners who've gone quiet.</p>
+    <div class="rev">
       <div><div class="panel">
-        <label for="files"><h2>Files or directories</h2></label>
-        <p class="hint" style="margin:0 0 10px">One per line, or a merged PR number.</p>
+        <label for="files">Files or directories</label>
+        <p class="tiny" style="margin:2px 0 10px">One per line, or a merged PR number.</p>
         <textarea id="files" spellcheck="false" placeholder="pkg/kubelet/cm/cpumanager/policy_static.go"></textarea>
         <div class="row-actions"><button type="button" id="find">Find reviewers</button><button type="button" class="quiet" id="example">Try an example</button></div>
-      </div></div>
-      <div id="rev-out"><p class="empty">Results show here: who to ask, the areas they cover, and their recent PRs as evidence.</p></div>
+      </div><p class="proofline" id="rev-proof"></p></div>
+      <div id="rev-out"><p class="empty">Who to ask shows up here, with the path through the graph that explains why.</p></div>
     </div>`;
-  const ev = state.summary && state.summary.reviewer_eval;
-  if (ev) $("#rev-proof").innerHTML = `Tested on ${ev.sampled} recent Kubernetes PRs: Drift's top 3 included the person who actually approved the change ${Math.round(ev.approver["drift@3"].rate * 100)}% of the time, against ${Math.round(ev.approver["owners@3_random"].rate * 100)}% for three approvers picked from the OWNERS files. <a href="#/proof">How this was measured</a>`;
   $("#example").onclick = () => { $("#files").value = EXAMPLE_FILES; findReviewers(); };
   $("#find").onclick = findReviewers;
   $("#files").addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") findReviewers(); });
+  try {
+    const ev = (await summary()).reviewer_eval;
+    if (ev) $("#rev-proof").innerHTML = `Tested on ${ev.sampled} recent PRs: the person who actually approved was in Drift's top 3 <b>${pct(ev.approver["drift@3"].rate)}</b> of the time, against ${pct(ev.approver["owners@3_random"].rate)} for three people picked from the OWNERS files. <a href="#/proof">How this was measured</a>`;
+  } catch { /* the form still works */ }
 }
 async function findReviewers() {
   const raw = $("#files").value.trim(), out = $("#rev-out");
@@ -285,145 +570,221 @@ async function findReviewers() {
   try {
     const body = /^#?\d+$/.test(raw) ? { pr: parseInt(raw.replace("#", ""), 10) } : { paths: raw };
     const r = await post("/api/reviewers", body);
-    if (r.outcome !== "answered_with_path") { out.innerHTML = `<p>${esc(r.note || r.text)}</p>`; return; }
-    const d = r.data, max = Math.max(1, ...d.people.map((p) => p.score));
-    out.innerHTML = `<h2 class="sec">Ask these people</h2><p class="sec-sub">Ranked by reviews and approvals in these areas since ${esc(d.since)}.</p>
-      ${r.note ? `<p class="notes">${esc(r.note)}</p>` : ""}
-      <ul class="people">${d.people.map((p) => `<li><span class="who">${gh(p.handle)}</span><span class="num">${p.reviewed} reviewed, ${p.approvals} approved</span>
-        <div class="meter"><span style="width:${(100 * p.score / max).toFixed(1)}%"></span></div>
-        <span class="meta">Last active ${esc(p.last_active)}; e.g. ${p.example_prs.map(pr).join(" ")}<span class="chips">${p.areas.map((a) => `<span class="chip">${esc(a)}</span>`).join("")}</span></span></li>`).join("")}</ul>
-      <h2 class="sec" style="margin-top:26px">Listed owners of these areas</h2><p class="sec-sub">From the OWNERS chain of each area. Marked if silent for a year.</p>
-      <ul class="people">${d.areas.map((a) => `<li><span class="who">${areaLink(a.dir)}</span><span class="num">${a.approvers} approvers up the chain</span>
-        <span class="meta">${a.silent_approvers.length ? `<span class="chips">${a.silent_approvers.map((h) => `<span class="chip silent">${esc(h)}</span>`).join("")}</span> no reviews, approvals or PRs in a year` : "All listed approvers active in the last year."}</span></li>`).join("")}</ul>
-      ${trace(r.trace)}`;
+    if (r.outcome !== "answered_with_path") { out.innerHTML = `<p>${esc(r.text || r.note)}</p>`; return; }
+    const d = r.data, [top, ...rest] = d.people;
+    // Silent owners, once each, with the areas whose chain lists them.
+    const quiet = {};
+    d.areas.forEach((a) => a.silent_approvers.forEach((h) => (quiet[h] = quiet[h] || []).push(a.dir)));
+    const quietList = Object.entries(quiet);
+    const crossN = (d.groups || []).length;
+    const crossNote = crossN > 1 ? `These files belong to ${crossN} different working groups, and each group has its own regular reviewers. Make sure someone from each one looks at the change.` : "";
+    const otherNote = (r.note || "").split(/(?<=\.)\s/).filter((x) => x && !x.includes("working groups")).join(" ");
+    const ex = top.example_prs[0], area = top.areas[top.areas.length - 1];
+    const steps = [[gh(top.handle), `reviewed or approved ${top.reviewed} merged PRs in these areas, for example`, "work"]];
+    if (ex) steps.push([pr(ex), "which changed files in", ""]);
+    steps.push([areaLink(area), quietList.length ? "whose OWNERS chain lists, among others" : "", "area", true]);
+    if (quietList.length) steps.push([`@${esc(quietList[0][0])}`, "no reviews, approvals or PRs here in a year", "record"]);
+    out.innerHTML = `<div class="pick"><div class="k">Ask first</div><h2>${gh(top.handle)}</h2>
+        <p>${top.approvals} approvals and ${top.reviewed} reviews across ${top.areas.length === 1 ? "this area" : `${top.areas.length} of these areas`} since ${day(d.since)}; last active ${day(top.last_active)}.</p>
+        ${trail(steps)}</div>
+      ${crossNote ? `<p class="cross">${linkify(crossNote)}</p>` : ""}
+      <section class="eg"><h2 style="font-size:19px">The evidence, as a graph</h2><p class="tiny" style="margin:2px 0 0">The nodes and edges this answer came from. Teal is the work people did; plum dashes lead to approvers the OWNERS files list who've been silent for a year.</p><div class="scroll">${reviewerGraph(d)}</div></section>
+      ${rest.length ? `<section class="sec" style="margin-top:30px"><h2 style="font-size:19px">Also good</h2>
+        <table class="t"><thead><tr><th>Person</th><th class="n">Approvals</th><th class="n">Reviews</th><th class="n hide-sm">Last active</th><th class="hide-sm">Recent PRs</th></tr></thead><tbody>${
+          rest.map((p) => `<tr><td>${gh(p.handle)}</td><td class="n">${p.approvals}</td><td class="n">${p.reviewed}</td><td class="n hide-sm">${day(p.last_active)}</td><td class="hide-sm">${p.example_prs.slice(0, 2).map(pr).join(" ")}</td></tr>`).join("")}</tbody></table></section>` : ""}
+      ${quietList.length ? `<section class="sec" style="margin-top:30px"><h2 style="font-size:19px">Listed, but quiet for a year</h2>
+        <p class="sub" style="margin-bottom:4px">These approvers are in the OWNERS chain for this change. Asking them will likely wait.</p>
+        <div class="quiet-owners">${quietList.map(([h, dirs]) => `<span class="qo" title="Listed for ${esc(dirs.join(", "))}">@${esc(h)}</span>`).join("")}</div></section>` : ""}
+      ${otherNote ? `<p class="tiny" style="margin-top:18px">${linkify(otherNote)}</p>` : ""}
+      ${how(r, `<p>Areas checked: ${d.areas.map((a) => areaLink(a.dir)).join(", ")}.</p>`)}`;
   } catch (err) { fail(out, err); }
 }
 
 // ---- areas -------------------------------------------------------------------------------
 async function viewAreas() {
   const v = $("#view");
-  v.innerHTML = `<div class="view-head"><h1>Areas</h1><p>Every directory with an OWNERS file. "Drifting" means at least one listed approver has no reviews, approvals or merged PRs in the last year.</p></div>
+  v.innerHTML = `<h1 style="font-size:34px;font-weight:750;font-stretch:80%">Areas</h1>
+    <p class="lede">Every directory with its own OWNERS file. One dot per listed approver; hollow means silent for a year.</p>
     <div class="filters"><input type="search" id="find-area" aria-label="Filter directories" placeholder="Filter, e.g. kubelet">
-      <div class="seg" role="group" aria-label="State">${["all", "drifting", "healthy", "inherits"].map((s) => `<button type="button" data-s="${s}" aria-pressed="${s === "all"}">${s[0].toUpperCase() + s.slice(1)}</button>`).join("")}</div>
-      <span class="muted" id="area-count"></span></div>
-    <div id="area-table"><p class="empty">Loading…</p></div>`;
-  try {
-    state.areas = state.areas || (await getJSON("/api/areas")).data;
-  } catch (err) { return fail($("#area-table"), err); }
+      <div class="seg" role="group" aria-label="Show">${[["all", "All"], ["drifting", "Drifting"], ["healthy", "Healthy"], ["inherits", "No own approvers"]].map(([s, l]) => `<button type="button" data-s="${s}" aria-pressed="${s === "all"}">${l}</button>`).join("")}</div>
+      <span class="tiny" id="area-count"></span></div>
+    <div id="area-table" style="margin-top:14px"><p class="empty">Loading…</p></div>`;
+  try { state.areas = state.areas || (await getJSON("/api/areas")).data; } catch (err) { return fail($("#area-table"), err); }
   let filt = "all";
   const render = () => {
     const q = $("#find-area").value.trim().toLowerCase();
     const rows = state.areas.areas.filter((a) => (filt === "all" || a.state === filt) && (!q || a.dir.toLowerCase().includes(q)));
     $("#area-count").textContent = `${rows.length} of ${state.areas.areas.length}`;
-    $("#area-table").innerHTML = `<table class="areas"><thead><tr><th>Directory</th><th>State</th><th class="n">Silent approvers</th><th class="n hide-sm">Merged PRs, 12 months</th></tr></thead><tbody>${
-      rows.slice(0, 250).map((a) => `<tr><td class="p">${areaLink(a.dir)}</td><td><span class="state ${a.state}">${a.state === "inherits" ? "inherits owners" : a.state}</span></td>
-        <td class="n">${a.approvers ? `${a.silent} of ${a.approvers}` : "none listed"}</td><td class="n hide-sm">${a.prs}</td></tr>`).join("")}</tbody></table>
-      ${rows.length > 250 ? `<p class="hint">Showing the first 250. Narrow the filter to see more.</p>` : ""}${rows.length ? "" : `<p class="empty">No directory matches. Try a shorter filter.</p>`}`;
+    $("#area-table").innerHTML = rows.length ? `<table class="t"><thead><tr><th>Directory</th><th>Approvers</th><th class="n">Silent</th><th class="n hide-sm">PRs, 12 months</th></tr></thead><tbody>${
+      rows.slice(0, 250).map((a) => `<tr><td class="p">${areaLink(a.dir)}</td><td>${a.approvers ? dots(a.approvers, a.silent) : `<span class="tiny">inherits from above</span>`}</td>
+        <td class="n ${a.silent ? "record" : ""}">${a.approvers ? `${a.silent} of ${a.approvers}` : ""}</td><td class="n hide-sm">${a.prs}</td></tr>`).join("")}</tbody></table>
+      ${rows.length > 250 ? `<p class="tiny">Showing the first 250. Narrow the filter to see the rest.</p>` : ""}` : `<p class="empty">No directory matches "${esc(q)}". Try a shorter filter.</p>`;
   };
   $("#find-area").addEventListener("input", render);
   v.querySelectorAll(".seg button").forEach((b) => b.onclick = () => { filt = b.dataset.s; v.querySelectorAll(".seg button").forEach((x) => x.setAttribute("aria-pressed", x === b)); render(); });
   render();
 }
 
-// Working group: areas the same people work on (FalkorDB label propagation over WORKS_WITH links).
-function groupPanel(g) {
-  if (!g || g.outcome !== "answered_with_path") {
-    return g && g.outcome === "not_in_graph" ? `<div class="file"><h2 class="sec">Works as one team with</h2><p class="sec-sub">${esc(g.note)}</p></div>` : "";
-  }
-  const d = g.data, others = d.areas.filter((a) => a.dir !== d.dir);
-  const own = new Set(d.own_sigs), mixed = d.sigs.length > 1;
-  return `<div class="file"><h2 class="sec">Works as one team with</h2>
-    <p class="sec-sub">${others.length} other area${others.length === 1 ? "" : "s"} share most of their reviewers with this one, found by community detection on who works where.${mixed ? ` Their SIG labels disagree: ${d.sigs.map(esc).join(", ")}.` : ""}</p>
-    <ul class="people">${d.links.map((l) => `<li><span class="who">${areaLink(l.dir)}</span><span class="num">${l.shared} people in both</span>
+// Working group as a small network: this area in the middle, the areas that share its people around it.
+function groupMap(g) {
+  if (!g) return "";
+  if (g.outcome !== "answered_with_path") return `<p class="sub">${esc(g.note || g.text)}</p>`;
+  const d = g.data, links = d.links.slice(0, 6), W = 560, H = 300, cx = W / 2, cy = H / 2, R = 112;
+  const max = Math.max(1, ...links.map((l) => l.shared));
+  const short = (p) => { const parts = p.split("/"); const s = parts.slice(-2).join("/"); return s.length > 26 ? "…" + s.slice(-25) : s; };
+  const pts = links.map((l, i) => { const a = -Math.PI / 2 + (2 * Math.PI * i) / Math.max(links.length, 1); return { ...l, x: cx + R * 1.55 * Math.cos(a), y: cy + R * Math.sin(a) }; });
+  const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(d.dir)} and the ${links.length} areas that share most of its people">
+    ${pts.map((p) => `<line class="gm-edge" x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke-width="${(1.5 + 5 * p.shared / max).toFixed(1)}"/>`).join("")}
+    <circle class="gm-center" cx="${cx}" cy="${cy}" r="11"/>
+    <text class="gm-label" x="${cx}" y="${cy + 28}" text-anchor="middle">${esc(short(d.dir))}</text>
+    ${pts.map((p) => `<a href="#/area/${encodeURIComponent(p.dir)}"><title>${esc(p.dir)}: ${p.shared} people work in both</title>
+      <circle class="gm-node" cx="${p.x}" cy="${p.y}" r="7"/>
+      <text class="gm-label" x="${p.x}" y="${p.y + (p.y < cy ? -14 : 22)}" text-anchor="middle">${esc(short(p.dir))}</text></a>`).join("")}
+  </svg>`;
+  const others = d.areas.filter((a) => a.dir !== d.dir), own = new Set(d.own_sigs);
+  return `<p class="sub">The areas that share the most people with this one; thicker lines mean more people in common. FalkorDB's label propagation puts it in a working group of ${d.areas.length} areas.${d.sigs.length > 1 ? ` The group carries ${d.sigs.length} different SIG labels: ${d.sigs.map(esc).join(", ")}.` : ""}</p>
+    <div class="groupmap">${svg}<div><ul class="people">${links.map((l) => `<li><span class="who">${areaLink(l.dir)}</span><span class="num">${l.shared} in both</span>
       <span class="meta">e.g. ${l.people.map(gh).join(", ")}</span></li>`).join("")}</ul>
-    <details class="levels"><summary>All ${d.areas.length} areas in this group</summary><ol>${d.areas.map((a) =>
-      `<li>${areaLink(a.dir)}${a.sigs.length ? ` <span class="muted">${a.sigs.map(esc).join(", ")}</span>` : ""}${a.sigs.some((x) => !own.has(x)) && own.size ? " <span class=\"chip\">different SIG</span>" : ""}</li>`).join("")}</ol></details>
-    ${d.people.length ? `<p class="hint">Most review work across the group: ${d.people.map((p) => `${gh(p.handle)} (${p.prs} PRs, ${p.areas} areas)`).join(", ")}.</p>` : ""}</div>`;
+      <details class="levels"><summary>All ${d.areas.length} areas in the group</summary><ol>${d.areas.map((a) =>
+        `<li>${areaLink(a.dir)}${a.sigs.length ? ` <span class="tiny">${a.sigs.map(esc).join(", ")}${own.size && a.sigs.some((x) => !own.has(x)) ? " (different SIG)" : ""}</span>` : ""}</li>`).join("")}</ol></details></div></div>`;
 }
 
 // ---- one area ----------------------------------------------------------------------------
+const SHOW = 4, moreRows = {};
+function personRows(list, render, id) {
+  const rows = list.map(render);
+  if (rows.length <= SHOW) return `<ul class="people">${rows.join("")}</ul>`;
+  moreRows[id] = rows.slice(SHOW).join("");
+  return `<ul class="people" id="${id}">${rows.slice(0, SHOW).join("")}</ul>
+    <button type="button" class="quiet more" data-more="${id}">Show all ${rows.length}</button>`;
+}
 async function viewArea(path) {
   const v = $("#view");
-  v.innerHTML = `<a class="back" href="#/areas">Areas</a><p class="empty">Loading ${esc(path)}…</p>`;
+  v.innerHTML = `<a class="back" href="#/areas">All areas</a><p class="empty">Loading ${esc(path)}…</p>`;
   let r;
   try { r = await getJSON("/api/dir?path=" + encodeURIComponent(path)); } catch (err) { return fail(v, err); }
-  if (!r.knows) { v.innerHTML = `<a class="back" href="#/areas">Areas</a><p>${linkify(r.owns.text)}</p>`; return; }
+  if (!r.knows) {
+    const s = (r.owns.data && r.owns.data.suggestions) || [];
+    v.innerHTML = `<a class="back" href="#/areas">All areas</a><h1 style="font-size:28px;margin-top:10px">Nothing called ${esc(path)}</h1>
+      <p class="lede">${esc(r.owns.note || r.owns.text)}</p>${s.length ? `<p>Did you mean ${s.slice(0, 3).map(areaLink).join(", ")}?</p>` : ""}`;
+    return;
+  }
   const own = r.owns.data, k = r.knows.data, draft = r.draft;
   const sig = (own.levels.find((l) => l.sigs.length) || { sigs: [] }).sigs;
   const max = Math.max(1, ...k.approvers.map((a) => a.prs_here), ...k.shadow_owners.map((s) => s.prs_here));
   const silentN = k.approvers.filter((a) => a.status === "silent").length;
-  const listed = k.approvers.length ? k.approvers.slice().reverse().map((a) => `<li class="${a.status === "silent" ? "silent" : ""}">
-      <span class="who">${gh(a.handle)}</span><span class="num">${a.prs_here} here</span>
-      <div class="meter"><span style="width:${(100 * a.prs_here / max).toFixed(1)}%"></span></div>
-      <span class="meta">${a.status === "silent" ? `No reviews, approvals or merged PRs since ${esc(k.since)}` : `${a.prs_anywhere} PRs across the repo`}${a.via !== "direct" ? `; listed through <code>${esc(a.via)}</code>` : ""}</span></li>`).join("")
-    : `<li><span class="meta">No approvers listed here; approval comes from the chain above.</span></li>`;
-  const shadow = k.shadow_owners.length ? k.shadow_owners.map((s) => `<li>
-      <span class="who">${gh(s.handle)}</span><span class="num">${s.prs_here} here</span>
-      <div class="meter"><span style="width:${(100 * s.prs_here / max).toFixed(1)}%"></span></div>
-      <span class="meta">${s.how.map((h) => HOW[h] || h).join(", ")}; e.g. ${s.example_prs.map(pr).join(" ")}${s.listed_below.length ? `; listed on ${s.listed_below.map((x) => `<code>${esc(x)}</code>`).join(", ")}` : ""}</span></li>`).join("")
-    : `<li><span class="meta">Nobody outside the listed owners worked here since ${esc(k.since)}.</span></li>`;
-  let file;
-  if (draft.outcome === "answered_with_path" && (draft.data.remove.length || draft.data.add_reviewers.length)) {
-    const d = draft.data, ev = d.evidence, rows = [];
-    d.remove.forEach((h, i) => {
-      rows.push(`<div class="line del"><pre>approvers:\n  - ${esc(h)}</pre><div class="why">${linkify("@" + ev[i])}</div></div>`);
-      rows.push(`<div class="line add"><pre>emeritus_approvers:\n  - ${esc(h)}</pre><div class="why">Keeps the record of who owned this.</div></div>`);
-    });
-    d.add_reviewers.forEach((h, j) => rows.push(`<div class="line add"><pre>reviewers:\n  - ${esc(h)}</pre><div class="why">${linkify("@" + ev[d.remove.length + j])}</div></div>`));
-    file = `<div class="file"><h2 class="sec">Drafted fix</h2><p class="sec-sub">For a maintainer to review. Evidence sits beside each line; Drift never edits Kubernetes itself.</p>
-      <div class="diff"><div class="fname"><span>${esc(d.dir)}/OWNERS</span><a href="https://github.com/kubernetes/kubernetes/blob/master/${esc(d.dir === "." ? "" : d.dir + "/")}OWNERS" target="_blank" rel="noopener">View current file</a></div>${rows.join("")}</div>
-      ${d.notes.map((n) => `<p class="notes">${linkify(n)}</p>`).join("")}
-      <div class="row-actions"><button type="button" id="dl-one">Download patch</button><button type="button" class="quiet" id="add-q">${state.picked.has(d.dir) ? "In cleanup queue" : "Add to cleanup queue"}</button></div></div>`;
-  } else {
-    file = `<div class="file"><h2 class="sec">Drafted fix</h2><p class="sec-sub">${esc(draft.note || "No change needed here.")}</p></div>`;
-  }
-  v.innerHTML = `<a class="back" href="#/areas">Areas</a>
-    <div class="dir-head"><h1><a href="https://github.com/kubernetes/kubernetes/tree/master/${k.dir === "." ? "" : esc(k.dir)}" target="_blank" rel="noopener">${esc(k.dir)}</a></h1>
-      <p>${sig.length ? `Owned by ${sig.map(esc).join(", ")}. ` : ""}${silentN} of ${k.approvers.length} listed approvers silent since ${esc(k.since)}.</p>
-      ${chain(r.owns.paths)}
-      <details class="levels"><summary>Approvers at each level of the chain</summary><ol>${own.levels.map((l) =>
-        `<li><code>${esc(l.dir)}</code>: ${l.approvers.length ? l.approvers.map(gh).join(", ") : "none listed"}${l.stops_inheritance ? " (inheritance stops here)" : ""}</li>`).join("")}</ol></details>
-      ${r.owns.note ? `<p class="hint">${esc(r.owns.note)}</p>` : ""}</div>
-    <div class="cols">
-      <div><h2 class="sec">What OWNERS says</h2><p class="sec-sub">Approvers listed for this directory.</p><ul class="people">${listed}</ul></div>
-      <div><h2 class="sec">Who actually does the work</h2><p class="sec-sub">Not listed here or above; ranked by merged PRs they wrote, reviewed or approved here.</p><ul class="people">${shadow}</ul></div>
-    </div>${groupPanel(r.group)}${file}${trace(r.knows.trace)}`;
-  const dl = $("#dl-one"); if (dl) dl.onclick = () => downloadPatch([k.dir], dl);
-  const aq = $("#add-q"); if (aq) aq.onclick = () => { state.picked.add(k.dir); aq.textContent = "In cleanup queue"; };
+  const approvers = k.approvers.slice().sort((a, b) => (b.status === "silent") - (a.status === "silent") || b.prs_here - a.prs_here);
+  const listed = approvers.length ? personRows(approvers, (a) => `<li class="${a.status === "silent" ? "silent" : ""}">
+      <span class="who">${gh(a.handle)}</span><span class="num">${a.prs_here} PRs here</span>
+      <div class="bar1"><span style="width:${(100 * a.prs_here / max).toFixed(1)}%"></span></div>
+      <span class="meta">${a.status === "silent" ? `Silent since ${day(k.since)}` : `${a.prs_anywhere} PRs across the repo`}${a.via !== "direct" ? `; listed through <code>${esc(a.via)}</code>` : ""}</span></li>`, "more-listed")
+    : `<ul class="people"><li><span class="meta">No approvers listed here; approval comes from the directories above.</span></li></ul>`;
+  const shadow = k.shadow_owners.length ? personRows(k.shadow_owners, (s) => `<li>
+      <span class="who">${gh(s.handle)}</span><span class="num">${s.prs_here} PRs here</span>
+      <div class="bar1"><span style="width:${(100 * s.prs_here / max).toFixed(1)}%"></span></div>
+      <span class="meta">${s.how.map((h) => HOW[h] || h).join(", ")}; e.g. ${s.example_prs.slice(0, 2).map(pr).join(" ")}${s.listed_below.length ? `; listed lower down, on ${s.listed_below.map((x) => `<code>${esc(x)}</code>`).join(", ")}` : ""}</span></li>`, "more-shadow")
+    : `<ul class="people"><li><span class="meta">Nobody outside the listed owners worked here since ${day(k.since)}.</span></li></ul>`;
+  const hasFix = draft.outcome === "answered_with_path" && (draft.data.remove.length || draft.data.add_reviewers.length);
+  const tabs = [
+    ["fix", hasFix ? "The drafted fix" : "No fix needed", hasFix
+      ? `<p class="sub">A proposal for a maintainer, with the evidence beside each line. Drift never edits Kubernetes.</p>${ownersFile(draft.data, { foot: `${draft.data.notes.map((n) => `<span>${linkify(n)}</span>`).join("")}<span class="row-actions" style="margin:0"><button type="button" id="dl-one">Download patch</button><button type="button" class="quiet" id="add-q">${state.picked.has(draft.data.dir) ? "In your fix list" : "Add to fix list"}</button></span>` })}`
+      : `<p class="sub">${esc(draft.note || "The listed approvers are active, so there's nothing to change.")}</p>`],
+    ["group", "Working group", groupMap(r.group)],
+    ["whatif", "What if", `<p class="sub">Pick listed approvers and see what happens to approval routing if they step back, here and everywhere else they're listed. Simulated on a copy of the graph.</p>
+      <div class="wi-pick">${approvers.length ? approvers.map((a, i) => `<label><input type="checkbox" value="${esc(a.handle)}" ${i === approvers.findIndex((x) => x.status !== "silent") ? "checked" : ""}>@${esc(a.handle)}${a.status === "silent" ? ' <span class="tiny">(silent)</span>' : ""}</label>`).join("") : '<span class="tiny">No approvers listed here.</span>'}</div>
+      <div class="row-actions" style="margin-top:0"><input type="text" id="wi-more" placeholder="Anyone else, e.g. @deads2k" style="max-width:260px"><button type="button" id="wi-run">Simulate</button></div>
+      <div id="wi-out" style="margin-top:14px"></div>`],
+    ["chain", "Ownership chain", `<p class="sub">OWNERS files inherit: approval for <code>${esc(k.dir)}</code> can also come from every level above it, up to the root.</p>
+      <ul class="chainlist">${own.levels.map((l) => `<li><code>${esc(l.dir)}</code><span>${l.approvers.length ? l.approvers.map(gh).join(", ") : `<span class="tiny">no approvers listed</span>`}${l.stops_inheritance ? ` <span class="tiny">(inheritance stops here)</span>` : ""}</span></li>`).join("")}</ul>`],
+  ];
+  v.innerHTML = `<a class="back" href="#/areas">All areas</a>
+    <div class="area-head"><h1><a href="https://github.com/kubernetes/kubernetes/tree/master/${k.dir === "." ? "" : esc(k.dir)}" target="_blank" rel="noopener">${esc(k.dir)}</a></h1>
+      <p>${sig.length ? `Owned by ${sig.map(esc).join(", ")}. ` : ""}${k.approvers.length ? `${dots(k.approvers.length, silentN)} <span class="${silentN ? "record" : "work"}">${silentN} of ${k.approvers.length} listed approvers silent since ${day(k.since)}.</span>` : "No approvers of its own; see the ownership chain."}</p>
+      ${r.owns.note ? `<p class="tiny">${esc(r.owns.note)}</p>` : ""}</div>
+    <div class="vs">
+      <div><h2 class="record">What the OWNERS file says</h2><p>Listed approvers, by PRs they worked on here in the last year.</p>${listed}</div>
+      <div><h2 class="work">Who actually does the work</h2><p>Not listed here or above; by merged PRs they wrote, reviewed or approved here.</p>${shadow}</div>
+    </div>
+    <div class="tabs2" role="tablist" aria-label="More about this area">${tabs.map(([id, label], i) =>
+      `<button type="button" role="tab" id="tab-${id}" aria-controls="panel-${id}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">${label}</button>`).join("")}</div>
+    ${tabs.map(([id, , html], i) => `<div class="tabpanel" role="tabpanel" id="panel-${id}" aria-labelledby="tab-${id}" ${i === 0 ? "" : "hidden"}>${html}</div>`).join("")}
+    ${how({ trace: [...(r.owns.trace || []), ...(r.knows.trace || []), ...(draft.trace || []), ...((r.group && r.group.trace) || [])] })}`;
+  const tabBtns = [...v.querySelectorAll('[role="tab"]')];
+  const select = (btn) => { tabBtns.forEach((b) => { const on = b === btn; b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1; $("#" + b.getAttribute("aria-controls")).hidden = !on; }); };
+  tabBtns.forEach((b, i) => { b.onclick = () => select(b); b.onkeydown = (e) => {
+    const j = e.key === "ArrowRight" ? (i + 1) % tabBtns.length : e.key === "ArrowLeft" ? (i - 1 + tabBtns.length) % tabBtns.length : -1;
+    if (j >= 0) { select(tabBtns[j]); tabBtns[j].focus(); } }; });
+  v.querySelectorAll("[data-more]").forEach((b) => b.onclick = () => {
+    $("#" + b.dataset.more).insertAdjacentHTML("beforeend", moreRows[b.dataset.more]); b.remove(); });
+  const wiRun = $("#wi-run");
+  if (wiRun) wiRun.onclick = async () => {
+    const handles = [...v.querySelectorAll(".wi-pick input:checked")].map((c) => "@" + c.value).concat($("#wi-more").value.trim()).join(" ").trim();
+    const out = $("#wi-out");
+    if (!handles) { out.innerHTML = `<p class="tiny">Pick at least one person.</p>`; return; }
+    out.innerHTML = `<p class="empty">Copying the graph and re-routing approvals…</p>`;
+    try { out.innerHTML = whatIfHtml(await post("/api/whatif", { handles }), { noHow: true }); } catch (err) { fail(out, err); }
+  };
+  const dl = $("#dl-one"); if (dl) dl.onclick = () => downloadPatch([draft.data.dir], dl);
+  const aq = $("#add-q"); if (aq) aq.onclick = () => { state.picked.add(draft.data.dir); aq.textContent = "In your fix list"; };
 }
 
-// ---- cleanup queue -----------------------------------------------------------------------
-async function viewCleanup() {
+// ---- fix the records ---------------------------------------------------------------------
+async function viewFix() {
   const v = $("#view");
-  v.innerHTML = `<div class="view-head"><h1>Cleanup queue</h1>
-      <p>Drafted OWNERS changes for the directories that drifted most. Each one moves silent approvers to <code>emeritus_approvers</code> and adds up to three people who review there. Tick the ones you agree with and download a single patch.</p></div>
+  v.innerHTML = `<h1 style="font-size:34px;font-weight:750;font-stretch:80%">Fix the records</h1>
+    <p class="lede">Drafted OWNERS changes for the areas that drifted most. Each one moves silent approvers to <code>emeritus_approvers</code>, keeping the history, and adds up to three people who review there now. Tick the ones you agree with and download one patch.</p>
     <div id="queue"><p class="empty">Drafting fixes from the last year of activity…</p></div>`;
-  try { state.queue = state.queue || (await getJSON("/api/cleanup")).data; } catch (err) { return fail($("#queue"), err); }
-  const q = state.queue.queue;
-  if (!state.picked.size) q.forEach((x) => state.picked.add(x.dir));
-  const count = () => q.filter((x) => state.picked.has(x.dir)).length;
-  $("#queue").innerHTML = `<div class="queue-bar"><label><input type="checkbox" id="all" ${count() === q.length ? "checked" : ""}> Select all ${q.length}</label>
-      <span class="muted"><span id="n">${count()}</span> selected. Apply with <span class="cmd">git apply drift-owners.patch</span></span>
+  let q;
+  try { q = await queue(); } catch (err) { return fail($("#queue"), err); }
+  const items = q.queue;
+  if (!state.picked.size) items.forEach((x) => state.picked.add(x.dir));
+  const count = () => items.filter((x) => state.picked.has(x.dir)).length;
+  const what = (x) => [x.remove.length ? `<span class="record">move ${x.remove.map((h) => "@" + esc(h)).join(", ")} to emeritus</span>` : "",
+    x.add_reviewers.length ? `<span class="work">add ${x.add_reviewers.map((h) => "@" + esc(h)).join(", ")} as reviewer${x.add_reviewers.length > 1 ? "s" : ""}</span>` : ""].filter(Boolean).join("; ");
+  $("#queue").innerHTML = `<div id="check"></div><div class="queue-bar"><label><input type="checkbox" id="all" ${count() === items.length ? "checked" : ""}> All ${items.length}</label>
+      <span class="tiny"><span id="n">${count()}</span> selected. Apply with <span class="cmd">git apply drift-owners.patch</span></span>
       <button type="button" id="dl">Download patch</button></div>
-    <ul class="queue">${q.map((x) => `<li><div class="q-head"><input type="checkbox" data-dir="${esc(x.dir)}" aria-label="Include ${esc(x.dir)}" ${state.picked.has(x.dir) ? "checked" : ""}>
-        <div><div class="p">${areaLink(x.dir)}</div><div class="what">${x.remove.length ? `Move ${x.remove.map(esc).join(", ")} to emeritus` : ""}${x.remove.length && x.add_reviewers.length ? "; " : ""}${x.add_reviewers.length ? `add ${x.add_reviewers.map(esc).join(", ")} as reviewer${x.add_reviewers.length > 1 ? "s" : ""}` : ""}</div></div>
-        <button type="button" class="quiet" data-toggle aria-expanded="false">Evidence</button></div>
-        <div class="q-body" hidden><ul>${x.evidence.map((e) => `<li>${linkify("@" + e)}</li>`).join("")}</ul>${x.notes.map((n) => `<p class="notes">${linkify(n)}</p>`).join("")}</div></li>`).join("")}</ul>`;
-  const sync = () => { $("#n").textContent = count(); $("#all").checked = count() === q.length; $("#dl").disabled = count() === 0; };
+    <ul class="queue">${items.map((x, i) => `<li><div class="q-head"><input type="checkbox" data-dir="${esc(x.dir)}" aria-label="Include ${esc(x.dir)}" ${state.picked.has(x.dir) ? "checked" : ""}>
+        <div><div class="p">${areaLink(x.dir)}</div><div class="what">${what(x)}</div></div>
+        <button type="button" class="quiet" data-toggle="${i}" aria-expanded="false">Show the file</button></div>
+        <div class="q-body" hidden id="qb-${i}"></div></li>`).join("")}</ul>`;
+  const sync = () => { $("#n").textContent = count(); $("#all").checked = count() === items.length; $("#dl").disabled = count() === 0; runCheck(); };
+  let checkTimer = null;
+  const runCheck = () => { clearTimeout(checkTimer); checkTimer = setTimeout(async () => {
+    const dirs = items.filter((x) => state.picked.has(x.dir)).map((x) => x.dir), box = $("#check");
+    if (!box) return;
+    if (!dirs.length) { box.innerHTML = ""; return; }
+    box.innerHTML = `<div class="check"><div><div class="k">…</div><div class="l">Checking ${dirs.length} changes on a copy of the graph</div></div></div>`;
+    try {
+      const r = await post("/api/checkfix", { dirs }), d = r.data;
+      if (r.outcome !== "answered_with_path") { box.innerHTML = `<p class="tiny">${esc(r.note || r.text)}</p>`; return; }
+      box.innerHTML = `<div class="check">
+          <div><div class="k work">${d.fixed.length}</div><div class="l">areas unstuck</div></div>
+          <div><div class="k ${d.stuck.length ? "record" : ""}">${d.stuck.length}</div><div class="l">areas made stuck</div></div>
+          <div><div class="k">${d.stuck_before} → ${d.stuck_after}</div><div class="l">areas waiting only on silent approvers</div></div>
+          <div class="side">Drift applied the ${d.changes} changes to a copy of the graph and re-ran ownership routing. <button type="button" class="quiet" id="see-check" style="margin-top:6px">${d.fixed.length || d.stuck.length ? "Show which areas" : "Details"}</button></div></div>
+        <div id="check-detail" hidden></div>`;
+      $("#see-check").onclick = () => { const det = $("#check-detail"); if (!det.innerHTML) det.innerHTML = whatIfHtml(r, { noText: true }); det.hidden = !det.hidden; };
+    } catch (err) { box.innerHTML = `<p class="tiny">${esc(err.message)}</p>`; }
+  }, 350); };
   $("#queue").querySelectorAll("input[data-dir]").forEach((c) => c.onchange = () => { c.checked ? state.picked.add(c.dataset.dir) : state.picked.delete(c.dataset.dir); sync(); });
-  $("#all").onchange = (e) => { q.forEach((x) => e.target.checked ? state.picked.add(x.dir) : state.picked.delete(x.dir)); $("#queue").querySelectorAll("input[data-dir]").forEach((c) => c.checked = e.target.checked); sync(); };
-  $("#queue").querySelectorAll("[data-toggle]").forEach((b) => b.onclick = () => { const body = b.closest("li").querySelector(".q-body"); body.hidden = !body.hidden; b.setAttribute("aria-expanded", !body.hidden); });
-  $("#dl").onclick = () => downloadPatch(q.filter((x) => state.picked.has(x.dir)).map((x) => x.dir), $("#dl"));
+  $("#all").onchange = (e) => { items.forEach((x) => e.target.checked ? state.picked.add(x.dir) : state.picked.delete(x.dir)); $("#queue").querySelectorAll("input[data-dir]").forEach((c) => c.checked = e.target.checked); sync(); };
+  $("#queue").querySelectorAll("[data-toggle]").forEach((b) => b.onclick = () => {
+    const i = +b.dataset.toggle, body = $("#qb-" + i);
+    if (!body.innerHTML) body.innerHTML = ownersFile(items[i]) + items[i].notes.map((n) => `<p class="tiny">${linkify(n)}</p>`).join("");
+    body.hidden = !body.hidden; b.setAttribute("aria-expanded", !body.hidden); b.textContent = body.hidden ? "Show the file" : "Hide the file";
+  });
+  $("#dl").onclick = () => downloadPatch(items.filter((x) => state.picked.has(x.dir)).map((x) => x.dir), $("#dl"));
   sync();
 }
 async function downloadPatch(dirs, btn) {
-  const label = btn.textContent; btn.disabled = true; btn.textContent = "Building patch…";
+  const label = btn.textContent; btn.disabled = true; btn.textContent = "Building the patch…";
   try {
     const r = await api("/api/patch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dirs }) });
     const url = URL.createObjectURL(await r.blob());
     const a = Object.assign(document.createElement("a"), { href: url, download: "drift-owners.patch" });
     document.body.append(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    btn.textContent = "Downloaded";
+    btn.textContent = "Patch downloaded";
   } catch (err) { btn.textContent = err.message.slice(0, 60); }
   setTimeout(() => { btn.textContent = label; btn.disabled = false; }, 2500);
 }
@@ -431,91 +792,96 @@ async function downloadPatch(dirs, btn) {
 // ---- how we know -------------------------------------------------------------------------
 async function viewProof() {
   const v = $("#view");
-  v.innerHTML = `<div class="view-head"><h1>How we know it works</h1><p>Three tests on real Kubernetes history. Every number is regenerated by a script in the repository.</p></div>
-    <h2 class="sec" style="margin-top:28px">1. Does Find a reviewer pick the right people?</h2>
-    <p class="sec-sub" id="rev-sub">Loading…</p>
-    <table class="areas" id="rev-table"></table>
-    <h2 class="sec" style="margin-top:36px">2. Does drift show up a year early?</h2>
-    <p class="sec-sub" id="proof-sub">Loading…</p><div class="findings" id="findings"></div>
-    <h2 class="sec" style="margin-top:36px">3. Are the working groups real?</h2>
-    <p class="sec-sub" id="grp-sub">Loading…</p>
-    <table class="areas" id="grp-table"></table>
-    <div class="method">
-      <h2>How the reviewer test works</h2><p>For each sampled PR, Drift is asked for reviewers of the directories it touched using only activity merged before that PR, with its author excluded. The answer is the set of people who typed <code>/approve</code> on it. OWNERS files don't rank people, so the OWNERS figure is the exact chance that three approvers picked from the nearest OWNERS files include the right one; today's OWNERS files are used, which slightly favours them. While building this test a FalkorDB index bug let later activity leak in and inflated Drift's score to 86%; the published figure is after the fix, and <code>tests/test_eval_no_leak.py</code> guards it.</p>
-      <h2>How the working groups are found</h2><p>Two areas are linked when the same people review and write PRs in both; each area keeps its four strongest links. The few generalists who review almost everywhere are left out, or everything would join into one group. FalkorDB's <code>algo.labelPropagation</code> then finds the communities. To check them, the groups are rebuilt from activity before 2026-07-16 only. For later PRs, we ask how often two areas changed in the same PR fall in the same group, against shuffles that keep how often each area changes but ignore the groups. An earlier version of this check asked whether crossing groups means a PR needs more approvers; it gave opposite answers on two downloads of the data, so we don't claim it.</p>
-      <h2>The test</h2><p>Drift keeps two graphs of the same organisation side by side in FalkorDB: the OWNERS files as they were a year ago with only the activity before that date, and today's. It ran its normal queries on the year-old graph, which never sees the future, and the results were checked against today's OWNERS files.</p>
-      <h2>What counts as activity</h2><p>Merged pull requests in kubernetes/kubernetes that a person wrote, reviewed, or commented <code>/lgtm</code> or <code>/approve</code> on. Reviews on unmerged PRs and work in other repositories are not counted, so a silent approver may well be busy elsewhere.</p>
-      <h2>Limits</h2><ul><li>Predicting who will be removed barely beats chance, because stale entries are rarely cleaned up. That gap is the problem Drift exists to close.</li><li>One repository, two years of activity. The numbers are regenerated by <code>python -m orggraph.backtest</code> and stored in <code>results/backtest.json</code>.</li></ul>
-    </div>`;
-  try {
-    const sm = state.summary || (state.summary = await getJSON("/api/summary"));
-    const ev = sm.reviewer_eval;
-    if (ev) {
-      const pct = (x) => Math.round(x.rate * 100) + "%";
-      $("#rev-sub").textContent = `${ev.sampled} PRs merged between ${ev.test_window[0]} and ${ev.test_window[1]}, sampled from ${ev.prs_in_window_with_an_approver}. Who actually approved each one?`;
-      $("#rev-table").innerHTML = `<thead><tr><th>Method</th><th class="n">Right person first</th><th class="n">Right person in top 3</th></tr></thead><tbody>
-        <tr><td><b>Drift</b></td><td class="n"><b>${pct(ev.approver["drift@1"])}</b></td><td class="n"><b>${pct(ev.approver["drift@3"])}</b> <span class="muted">(${Math.round(ev.approver["drift@3"].ci95[0]*100)}–${Math.round(ev.approver["drift@3"].ci95[1]*100)}%)</span></td></tr>
-        <tr><td>Pick from the OWNERS files</td><td class="n">${pct(ev.approver["owners@1_random"])}</td><td class="n">${pct(ev.approver["owners@3_random"])}</td></tr>
-        <tr><td>Ask the busiest approvers</td><td class="n">n/a</td><td class="n">${pct(ev.approver["popular@3"])}</td></tr></tbody>`;
-    }
-    const bt = sm.backtest;
-    if (!bt) { $("#proof-sub").textContent = "Run python -m orggraph.backtest to produce the results."; return; }
-    const so = bt.silent_owners, t30 = bt.shadow_owners.top_k.find((x) => x.k === 30) || bt.shadow_owners.top_k[0];
-    $("#proof-sub").textContent = `Drift was run on the organisation as it stood on ${bt.snapshot}, using only the year of activity before that date, then checked against today.`;
-    $("#findings").innerHTML = `<p>${so.silent_then} of ${so.approvers_then} approvers had been silent for a year.<span class="src">On ${esc(bt.snapshot)}: no reviews, /lgtm, /approve or merged PRs.</span></p>
-      <p>${so.silent_still_listed_now} of those ${so.silent_then} were still approvers a year later.<span class="src">The records rarely catch up on their own; predicting removals beats chance by only ${so.lift}×.</span></p>
-      <p>The ${t30.k} busiest non-owner reviewers became owners at ${t30.lift}× the base rate.<span class="src">${t30.who.map(gh).join(", ")} were listed within the year.</span></p>`;
-    const gr = sm.groups;
-    if (gr && gr.check && gr.check.prs) {
-      const c = gr.check, pc = (x) => Math.round(x * 100) + "%";
-      $("#grp-sub").textContent = `Label propagation found ${gr.count} working groups over ${gr.dirs_grouped} areas; ${gr.cross_sig_groups} of them mix areas labelled with different SIGs. Groups built from activity before ${c.prs_from}, then tested on the ${c.prs} later PRs that touched 2 to 5 of these areas:`;
-      $("#grp-table").innerHTML = `<thead><tr><th>Areas changed in the same PR</th><th class="n">In the same group</th></tr></thead><tbody>
-        <tr><td><b>Drift's working groups</b></td><td class="n"><b>${pc(c.same_group_share)}</b></td></tr>
-        <tr><td>By chance <span class="muted">(${c.shuffles} shuffles, highest ${pc(c.chance_max)})</span></td><td class="n">${pc(c.chance_mean)}</td></tr></tbody>`;
-    }
-  } catch (err) { fail($("#findings"), err); }
+  v.innerHTML = `<p class="empty">Loading the results…</p>`;
+  let sm;
+  try { sm = await summary(); } catch (err) { return fail(v, err); }
+  const ev = sm.reviewer_eval, bt = sm.backtest, gr = sm.groups;
+  const t30 = bt && (bt.shadow_owners.top_k.find((x) => x.k === 30) || bt.shadow_owners.top_k[0]);
+  const grOk = gr && gr.check && gr.check.prs;
+  const fine = [
+    ["What counts as activity", "Merged pull requests in kubernetes/kubernetes that a person wrote, reviewed, or commented <code>/lgtm</code> or <code>/approve</code> on. Reviews on unmerged PRs and work in other repositories aren't counted, so a silent approver may well be busy elsewhere."],
+    ["How the OWNERS baseline is scored", "OWNERS files don't rank people, so their figure is the exact chance that three approvers picked from the nearest OWNERS files include the right one. Today's files are used, which slightly favours them."],
+    ["How the working groups are found", "Two areas are linked when the same people review and write PRs in both; each keeps its four strongest links. The few generalists who review almost everywhere are left out, or everything would merge into one group. FalkorDB's <code>algo.labelPropagation</code> then finds the communities."],
+    ["A bug we found and fixed", "While building the reviewer test, a FalkorDB index bug let later activity leak into the predictions and inflated Drift's score to 86%. The figure above is after the fix, and a test keeps it that way. The bug is still in FalkorDB 4.22; the repository has a script that reproduces it."],
+    ["A claim we dropped", "We also tested whether PRs that cross working groups need more approvers. One download of the data said three times as often, another said no difference, so we don't claim it."],
+    ["What's weak", bt ? `Predicting which silent approvers get removed beats chance by only ${bt.silent_owners.lift}×, because Kubernetes rarely cleans up its OWNERS files. That gap is the problem Drift exists to close.` : ""],
+  ].filter(([, t]) => t);
+  v.innerHTML = `<h1 style="font-size:34px;font-weight:750;font-stretch:80%">How we know it works</h1>
+    <p class="lede">Three tests on real Kubernetes history. In each, Drift only sees data from before the moment it's tested on. Every number is produced by a script in the repository.</p>
+    <div class="results">
+      ${ev ? `<div><h3>Find a reviewer</h3><div class="big">${pct(ev.approver["drift@3"].rate)}</div><div class="vsn">vs ${pct(ev.approver["owners@3_random"].rate)} from the OWNERS files</div>
+        <p>On ${ev.sampled} PRs merged ${day(ev.test_window[0])} to ${day(ev.test_window[1])}, the person who actually approved was in Drift's top 3.</p>
+        <details><summary>See the numbers</summary><table class="t"><thead><tr><th>Method</th><th class="n">First</th><th class="n">Top 3</th></tr></thead><tbody>
+          <tr><td><b>Drift</b></td><td class="n"><b>${pct(ev.approver["drift@1"].rate)}</b></td><td class="n"><b>${pct(ev.approver["drift@3"].rate)}</b></td></tr>
+          <tr><td>OWNERS files</td><td class="n">${pct(ev.approver["owners@1_random"].rate)}</td><td class="n">${pct(ev.approver["owners@3_random"].rate)}</td></tr>
+          <tr><td>Busiest approvers</td><td class="n">n/a</td><td class="n">${pct(ev.approver["popular@3"].rate)}</td></tr></tbody></table>
+          <p class="tiny">${ev.sampled} PRs sampled from ${ev.prs_in_window_with_an_approver}; author excluded; 95% CI for Drift's top 3: ${Math.round(ev.approver["drift@3"].ci95[0] * 100)}–${Math.round(ev.approver["drift@3"].ci95[1] * 100)}%.</p></details></div>` : ""}
+      ${t30 ? `<div><h3>Spotting future owners</h3><div class="big">${t30.lift}×</div><div class="vsn">the base rate</div>
+        <p>The ${t30.k} busiest unlisted reviewers on ${day(bt.snapshot)} became owners within a year at ${t30.lift}× the rate of everyone else.</p>
+        <details><summary>See the numbers</summary><table class="t"><tbody>
+          <tr><td>Approvers silent for the year before</td><td class="n record">${bt.silent_owners.silent_then} of ${bt.silent_owners.approvers_then}</td></tr>
+          <tr><td>Still listed a year later</td><td class="n record">${bt.silent_owners.silent_still_listed_now}</td></tr>
+          <tr><td>Top ${t30.k} reviewers who became owners</td><td class="n work">${t30.who.length}</td></tr></tbody></table>
+          <p class="tiny">They were ${t30.who.map(gh).join(", ")}.</p></details></div>` : ""}
+      ${grOk ? `<div><h3>Working groups</h3><div class="big">${pct(gr.check.same_group_share)}</div><div class="vsn">vs ${pct(gr.check.chance_mean)} by chance</div>
+        <p>Of areas changed together in ${gr.check.prs} later PRs, this share fell in the same working group.</p>
+        <details><summary>See the numbers</summary><table class="t"><tbody>
+          <tr><td>Working groups found</td><td class="n">${gr.count}, over ${gr.dirs_grouped} areas</td></tr>
+          <tr><td>Groups mixing SIG labels</td><td class="n">${gr.cross_sig_groups}</td></tr>
+          <tr><td>Best of ${gr.check.shuffles} random shuffles</td><td class="n">${pct(gr.check.chance_max)}</td></tr></tbody></table>
+          <p class="tiny">Groups built from activity before ${day(gr.check.prs_from)}; tested on later PRs touching two to five grouped areas.</p></details></div>` : ""}
+    </div>
+    <section class="fine"><h2>The fine print</h2>${fine.map(([h, t]) => `<details><summary>${h}</summary><p>${t}</p></details>`).join("")}</section>`;
 }
 
 // ---- ask drawer --------------------------------------------------------------------------
-const EXAMPLES = ["How stale is ownership across Kubernetes?", "Who really works on pkg/kubelet/cm/cpumanager?", "Why was KEP 2340 decided?", "Who owns pkg/kublet?"];
-function openDrawer(html) { $("#drawer-body").innerHTML = html; $("#drawer").hidden = false; $("#shade").hidden = false; $("#close").focus(); }
-function closeDrawer() { $("#drawer").hidden = true; $("#shade").hidden = true; $("#q").focus(); }
+const EXAMPLES = ["How stale is ownership across Kubernetes?", "Who really works on pkg/kubelet/cm/cpumanager?", "What if @deads2k stepped back?", "Which areas work with pkg/kubelet/cm/dra?", "Why was KEP 2340 decided?", "Who owns pkg/kublet?"];
+let lastFocus = null;
+function openDrawer(html) { lastFocus = document.activeElement; $("#drawer-body").innerHTML = html; $("#drawer").hidden = false; $("#shade").hidden = false; $("#close").focus(); }
+function closeDrawer() { $("#drawer").hidden = true; $("#shade").hidden = true; (lastFocus || $("#q")).focus(); }
 $("#close").onclick = closeDrawer; $("#shade").onclick = closeDrawer;
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#drawer").hidden) closeDrawer(); });
 $("#ask").addEventListener("submit", (e) => { e.preventDefault(); ask($("#q").value.trim()); });
+const examplesHtml = (skip) => `<div class="examples">${EXAMPLES.filter((x) => x !== skip).slice(0, 4).map((x) => `<button type="button" class="quiet" data-ex>${esc(x)}</button>`).join("")}</div>`;
+function wireDrawer() {
+  $("#drawer-body").querySelectorAll("[data-dir]").forEach((b) => b.onclick = () => { closeDrawer(); location.hash = "#/area/" + encodeURIComponent(b.dataset.dir); });
+  $("#drawer-body").querySelectorAll("a[href^='#/']").forEach((a) => a.addEventListener("click", closeDrawer));
+  $("#drawer-body").querySelectorAll("[data-ex]").forEach((b) => b.onclick = () => { $("#q").value = b.textContent; ask(b.textContent); });
+}
 async function ask(q) {
-  if (!q) {
-    openDrawer(`<p class="muted">Ask about a directory, a person's area, or a KEP. For example:</p><div class="examples">${EXAMPLES.map((x) => `<button type="button" class="quiet" data-ex>${esc(x)}</button>`).join("")}</div>`);
-    $("#drawer-body").querySelectorAll("[data-ex]").forEach((b) => b.onclick = () => { $("#q").value = b.textContent; ask(b.textContent); });
-    return;
-  }
+  if (!q) { openDrawer(`<p class="q">Ask about a directory, a person's area or a decision (KEP). For example:</p>${examplesHtml()}`); wireDrawer(); return; }
   openDrawer(`<p class="q">${esc(q)}</p><p class="empty">Walking the graph…</p>`);
   try {
     const r = await post("/api/ask", { question: q, session });
     const sugg = (r.data && r.data.suggestions || []).map((s) => `<button type="button" class="quiet" data-dir="${esc(s)}">${esc(s)}</button>`).join("");
-    const mem = (r.memory || []).slice(0, 2).map((m) => `<p class="memory">Learned ${esc(m.learned_at.slice(0, 10))}: ${linkify(m.text)}</p>`).join("");
+    const mem = r.memory || [], same = mem.filter((m) => m.same_as_now), diff = mem.filter((m) => !m.same_as_now);
+    const changeLine = (m) => [m.added && m.added.length ? `now also names ${m.added.slice(0, 4).map(gh).join(", ")}` : "",
+      m.dropped && m.dropped.length ? `no longer names ${m.dropped.slice(0, 4).map(gh).join(", ")}` : ""].filter(Boolean).join("; ");
+    const memHtml = diff.length ? diff.slice(0, 2).map((m) => changeLine(m)
+        ? `<p class="memory">Drift answered this on ${day(m.learned_at)}. Since then the answer ${changeLine(m)}.</p>`
+        : `<p class="memory">Earlier answer, ${day(m.learned_at)}: ${linkify(m.text)}</p>`).join("")
+      : same.length ? `<p class="memory">Drift answered this on ${day(same[0].learned_at)} too, and the graph still says the same.</p>` : "";
+    const picked = r.picked_by && r.picked_by.startsWith("model") ? `chosen by ${esc(r.picked_by)}` : "chosen by keyword matching";
+    const wrote = (r.written_by || "").startsWith("model") ? "sentence written by the model and checked against the graph" : "sentence built from the graph result";
+    if (r.tool === "what_if" && r.outcome === "answered_with_path") {
+      $("#drawer-body").innerHTML = `<p class="q">${esc(q)}</p>${whatIfHtml(r)}<hr><p class="tiny">Try another</p>${examplesHtml(q)}`;
+      wireDrawer(); return;
+    }
     $("#drawer-body").innerHTML = `<p class="q">${esc(q)}</p><p class="a">${linkify(r.text)}</p>
-      ${sugg ? `<div class="examples">${sugg}</div>` : ""}${chain(r.paths)}
-      ${r.data && r.data.dir ? `<p class="how"><a href="#/area/${encodeURIComponent(r.data.dir)}">Open ${esc(r.data.dir)}</a></p>` : ""}
-      <p class="how"><span class="tag ${esc(r.outcome)}">${esc(OUTCOME[r.outcome] || r.outcome)}</span> ${r.tool ? `Tool <code>${esc(r.tool)}</code>, chosen by ${esc(r.picked_by)}; sentence by ${esc(r.written_by)}.` : ""}</p>
-      ${r.note && !r.text.includes(r.note) ? `<p class="how">${esc(r.note)}</p>` : ""}${mem ? `<hr>${mem}` : ""}${trace(r.trace)}
-      <hr><div class="examples">${EXAMPLES.filter((x) => x !== q).slice(0, 3).map((x) => `<button type="button" class="quiet" data-ex>${esc(x)}</button>`).join("")}</div>`;
-    $("#drawer-body").querySelectorAll("[data-dir]").forEach((b) => b.onclick = () => { closeDrawer(); location.hash = "#/area/" + encodeURIComponent(b.dataset.dir); });
-    $("#drawer-body").querySelectorAll("a[href^='#/area/']").forEach((a) => a.addEventListener("click", closeDrawer));
-    $("#drawer-body").querySelectorAll("[data-ex]").forEach((b) => b.onclick = () => { $("#q").value = b.textContent; ask(b.textContent); });
-  } catch (err) { $("#drawer-body").innerHTML = `<p class="q">${esc(q)}</p><p>${esc(err.message)}</p>`; }
+      ${sugg ? `<div class="examples">${sugg}</div>` : ""}
+      ${(r.paths || []).length ? `<div style="margin-top:16px">${trailFromPath(r.paths[0])}</div>` : ""}
+      ${r.data && r.data.dir && r.outcome === "answered_with_path" ? `<p><a class="btn quiet" href="#/area/${encodeURIComponent(r.data.dir)}">Open ${esc(r.data.dir)}</a></p>` : ""}
+      ${memHtml}
+      ${how(r, r.tool ? `<p>Tool <code>${esc(r.tool)}</code>, ${picked}; ${wrote}.</p>` : "")}
+      <hr><p class="tiny">Try another</p>${examplesHtml(q)}`;
+    wireDrawer();
+  } catch (err) { $("#drawer-body").innerHTML = `<p class="q">${esc(q)}</p><p>${esc(err.message)}</p>${examplesHtml(q)}`; wireDrawer(); }
 }
 
 // ---- start -------------------------------------------------------------------------------
-(async function init() {
-  route();
-  try {
-    state.summary = await getJSON("/api/summary");
-    const s = state.summary.summary.data;
-    $("#fresh").textContent = `Activity up to ${s.as_of}`;
-    $("#status").innerHTML = `<b>${s.silent} of ${s.approvers} approvers</b> have done no reviews, approvals or merged PRs here since ${esc(s.since)}, and are still listed. <a href="#/cleanup">See the drafted fixes</a>`;
-  } catch (err) { $("#status").textContent = "Can't reach the graph. Start FalkorDB, build the graph (python scripts/build.py), then reload."; $("#fresh").textContent = "Offline"; }
-})();
+route();
+summary().then((sm) => { $("#fresh").textContent = `Activity up to ${day(sm.summary.data.as_of)}`; })
+  .catch(() => { $("#fresh").textContent = "Can't reach the graph right now"; });
 </script>
 </body>
 </html>

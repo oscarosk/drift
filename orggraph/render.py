@@ -126,6 +126,24 @@ def template(answer) -> str:
         if d["people"]:
             msg += f" Most of the review work there: {_people(d['people'], n=3)}."
         return msg
+    if t == "what_if":
+        who = ", ".join("@" + h for h in d["people"])
+        if d["stuck"]:
+            top = d["stuck"][0]
+            msg = (f"If {who} stepped back, approval for {len(d['stuck'])} area(s) would wait only on silent approvers, "
+                   f"most active first: {', '.join(r['dir'] for r in d['stuck'][:3])}.")
+            if top.get("could_cover"):
+                msg += f" Already reviewing {top['dir']}: {_people(top['could_cover'], n=3)}."
+        else:
+            msg = f"If {who} stepped back, no area would be left waiting on silent approvers"
+            msg += f"; {len(d['moved'])} area(s) would route approval further up the OWNERS chain." if d["moved"] else "."
+        if d["fixed"]:
+            msg += f" {len(d['fixed'])} area(s) that wait on silent approvers today would fall through to active ones."
+        return msg + " Simulated on a copy of the graph."
+    if t == "check_fix":
+        return (f"Applied to a copy of the graph, the {d['changes']} drafted changes unstick {len(d['fixed'])} area(s) "
+                f"and leave {len(d['stuck'])} stuck. Areas whose approval waits only on silent approvers: "
+                f"{d['stuck_before']} before, {d['stuck_after']} after.")
     if t == "areas":
         a = d["areas"]
         return f"{sum(x['state'] == 'drifting' for x in a)} of {len(a)} owned directories have silent approvers."

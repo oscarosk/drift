@@ -7,6 +7,10 @@
 On 400 recent Kubernetes PRs, Drift's top 3 suggested reviewers included the person who actually
 approved the change **78%** of the time. Picking from the OWNERS files: **37%**.
 
+Its 40 drafted OWNERS fixes, applied to a copy of the graph before anyone downloads them, unstick
+**12 areas** whose approval requests only reach approvers who've been silent for a year, and leave
+**none** stuck (Kubernetes-wide: 19 such areas before, 7 after).
+
 Every large engineering organisation writes down who owns what: CODEOWNERS, OWNERS files, team
 pages. Then people move on, new people quietly take over, and the records stop matching reality.
 Drift is a company brain built on [FalkorDB](https://www.falkordb.com/) that compares **what the
@@ -16,11 +20,11 @@ It runs on a real organisation: **Kubernetes**, with 24 teams (SIGs), ~800 peopl
 directories, ~680 decision records (KEPs) and 6,700+ merged pull requests with their reviews and
 approvals, all public.
 
-**Live:** https://drift-vqj4.onrender.com (free hosting: the first visit after a quiet spell takes about a minute to wake up)
+**Live:** https://drift-egny.onrender.com (free hosting: the first visit after a quiet spell takes about a minute to wake up)
 
 Tracks: **Company Brain** (primary), **Agents That Act on Connected Data**.
 
-> Status: work in progress during Graph Hacks (Oct 15–18, 2026).
+<p align="center"><img src="docs/model.svg" alt="Drift's graph: people, pull requests, directories, SIGs, KEPs and the agent's memory, with the records in plum and the work in teal" width="860"></p>
 
 ## Does it work? Measured on 400 real PRs
 
@@ -29,7 +33,7 @@ reviewers using **only activity from before that PR**, and we checked against wh
 
 | Method | Right person first | Right person in top 3 |
 |---|---|---|
-| **Drift** (Find a reviewer) | **53%** | **78%** (95% CI 74–82%) |
+| **Drift** (Find a reviewer) | **53%** | **78%** (95% CI 73–81%) |
 | Pick from the OWNERS files (what the records say) | 13% | 37% |
 | Ask the busiest approvers | n/a | 46% |
 
@@ -59,6 +63,9 @@ Numbers below are produced by `python -m orggraph.backtest` and stored in
   PRs in the same group, against **15%** by chance (the highest of 200 shuffles: 19%). See
   [`results/groups.json`](results/groups.json). We also tested whether crossing groups means a PR
   needs more approvers. One download of the data said 3×, another said no difference, so we don't claim it.
+- **The organisation is resilient to most single departures, with a few exceptions.** Of the 60 busiest
+  active approvers, 50 could step back without leaving any area waiting only on silent approvers. If
+  @deads2k stepped back, 6 would (the quota code); see [`results/whatif.json`](results/whatif.json).
 
 Scope note: activity covers merged PRs in kubernetes/kubernetes only. Someone "silent" here may be
 active in other Kubernetes repositories, or in work that leaves no PR trail. Drift reports what the
@@ -107,17 +114,18 @@ router and templates do, so everything works offline.
 
 | Screen | For | What it does |
 |---|---|---|
-| **Find a reviewer** | Contributors, every PR | Paste the files a change touches (or a merged PR number): the people who actually review that code now, with recent PRs as evidence, plus which listed owners have gone quiet. |
-| **Areas** | Anyone new to a part of the code | Every OWNERS directory, searchable, marked drifting / healthy / inherits; each opens a view of *what OWNERS says* next to *who actually does the work*. |
-| **Cleanup queue** | Maintainers, monthly | Drafted OWNERS fixes for the most drifted directories. Tick the ones you agree with and download one patch: `git apply drift-owners.patch`. Edits keep comments and formatting, are re-parsed and checked before export, and files using `filters:` are left for humans. |
-| **How we know** | Skeptics | The year-later backtest, its method and its limits. |
+| **Overview** | First visit | The headline drift figure, a live drafted OWNERS change with its evidence, and the areas that drifted most (one dot per approver, hollow if silent). |
+| **Find a reviewer** | Contributors, every PR | Paste the files a change touches (or a merged PR number): who to ask first and why, as a path through the graph, the next best people, and which listed owners have gone quiet. |
+| **Areas** | Anyone new to a part of the code | Every OWNERS directory, searchable. Each opens *what the OWNERS file says* next to *who actually does the work*, the drafted fix, and a map of the areas that share its people (its working group). |
+| **Fix the records** | Maintainers, monthly | Drafted OWNERS fixes for the most drifted directories. Tick the ones you agree with and download one patch: `git apply drift-owners.patch`. Edits keep comments and formatting, are re-parsed and checked before export, and files using `filters:` are left for humans. |
+| **How we know** | Skeptics | The three tests (reviewer accuracy, the year-later backtest, the working-group check), their method and the claims we dropped. |
 
-Ask anything from the top bar; answers open beside the page with their graph path and query trace.
+Ask anything from the top bar; answers open beside the page with their graph path, and the queries behind them under *How this was answered*.
 The data refreshes by re-running `fetch_reviews` and `build.py` (both incremental-friendly), e.g. weekly.
 
 ## How the agent works
 
-1. **A fixed tool catalogue.** The model chooses one of eight tools and fills in arguments; it never
+1. **A fixed tool catalogue.** The model chooses one of nine tools and fills in arguments; it never
    sees or writes Cypher. Every tool is a hand-written, parameterised query.
 2. **Names are resolved first.** A directory, person or KEP is looked up before any traversal runs.
    Typos get suggestions (`pkg/kublet` → `pkg/kubelet`); a file path resolves to the directory whose
@@ -127,8 +135,15 @@ The data refreshes by re-running `fetch_reviews` and `build.py` (both incrementa
 4. **Checked sentences.** The model's sentence is rejected if it names a person, directory or KEP the
    graph didn't return, or claims a finding when the result was empty; a template built from the rows
    is used instead.
-5. **Memory is more nodes.** Answers are saved as `(:Finding)-[:ABOUT]->(...)` and shown, with the date
-   they were learned, next to a fresh re-check the next time the same thing comes up.
+5. **Memory is more nodes.** Answers are saved as `(:Finding)-[:ABOUT]->(...)`, with `(:Finding)-[:CITES]->(:Person)`
+   for everyone they named. Next time, the fresh answer is compared with the remembered one and Drift says
+   what changed ("since Oct 17 the answer no longer names @x"). The web app, the CLI agent and the MCP
+   server share the same memory, so what one learns the others can `recall`. Because memory sits in the
+   same graph as the facts, one query can start in memory and end in facts:
+   `MATCH (f:Finding)-[:CITES]->(p:Person)-[:APPROVER_OF]->(d:Dir) RETURN f.text, p.handle, d.path`.
+6. **What-if runs on a copy.** `what_if` and `check_fix` copy the graph with `GRAPH.COPY`, edit the copy
+   the way the change would, re-run the same routing query on both graphs, diff, and delete the copy.
+   The live graph is never written (a test asserts both).
 
 | Tool | What it answers |
 |---|---|
@@ -140,7 +155,10 @@ The data refreshes by re-running `fetch_reviews` and `build.py` (both incrementa
 | `propose_owners_update(path)` | A drafted OWNERS change with evidence for every line (never applied) |
 | `suggest_reviewers(paths or pr)` | Who should review a concrete change, across every area it touches; flags when it crosses working groups |
 | `working_group(path)` | Areas worked on by the same people (FalkorDB label propagation), their SIG labels and core people |
-| `owners_patch(dirs)` | A `git apply`-able patch for drafted fixes (MCP and the Cleanup queue) |
+| `what_if(handles)` | If these people stepped back: areas whose approval would only reach silent approvers, where approval moves up the chain, and who already reviews there (on a `GRAPH.COPY`) |
+| `check_fix(dirs)` | Applies the drafted OWNERS changes to a `GRAPH.COPY`: areas unstuck, areas made stuck (API, MCP, Fix the records) |
+| `owners_patch(dirs)` | A `git apply`-able patch for drafted fixes (MCP and Fix the records) |
+| `recall(path or handle or kep)` | What any client established earlier, with dates and who it named (MCP) |
 
 ## Data sources
 
@@ -189,6 +207,9 @@ the predictions against today's graph.
 (:KEP)-[:SEE_ALSO|REPLACES|SUPERSEDED_BY]->(:KEP)
 (:KEP)-[:INTRODUCES]->(:FeatureGate {name})-[:AFFECTS]->(:Component {name})
 (:KEP)-[:REACHED {stage}]->(:Release {version})
+
+(:Finding {text, tool, at, as_of, session, people})-[:ABOUT]->(:Dir | :Person | :KEP)   # agent memory
+(:Finding)-[:CITES]->(:Person)
 ```
 
 `via` on ownership edges records whether a person is listed directly or through a team alias
@@ -265,6 +286,29 @@ RETURN node.path, communityId
 Every tool's queries are in [`orggraph/tools.py`](orggraph/tools.py), and every answer in the app and
 the API carries a trace of the queries it ran.
 
+**What-if, on a copy** (`orggraph/whatif.py`). Copy, edit the copy the way the change would, re-run routing, diff, delete:
+
+```cypher
+GRAPH.COPY kubernetes whatif_1a2b3c4d
+
+// on the copy: the people step back, exactly as an OWNERS edit would record it
+MATCH (p:Person)-[r:APPROVER_OF]->(d:Dir) WHERE p.handle IN $h
+MERGE (p)-[:EMERITUS_APPROVER_OF {via: 'what-if'}]->(d)
+DELETE r
+
+// on both graphs: for every OWNERS directory, each level of its chain and who is listed there
+MATCH (d:Dir {repo: 'kubernetes'}) WHERE d.has_owners
+MATCH chain = (d)-[:INSIDE*0..10]->(o:Dir)
+OPTIONAL MATCH (p:Person)-[:APPROVER_OF]->(o)
+RETURN d.path, length(chain) AS up, o.path, o.no_parent_owners, collect(DISTINCT p.handle)
+ORDER BY d.path, up
+
+GRAPH.DELETE whatif_1a2b3c4d
+```
+
+An approval request goes to the nearest level that lists approvers (stopping at `no_parent_owners`);
+the area is *stuck* if everyone listed there has been silent for a year.
+
 ## A FalkorDB issue we hit
 
 **An index range scan on a string property ignores the upper bound.** We first saw it on graph module
@@ -282,6 +326,8 @@ stores `day` as an integer (`20260910`), and all date filters use it.
   its OWNERS files. We report it anyway; the stale records are the finding.
 - OWNERS `no_parent_owners` (which stops inheritance) is applied in `who_owns`, not yet in the activity queries.
 - Memory lives in the same graph, so rebuilding the graph clears it.
+- The what-if counts an approver as active if they did any review, `/lgtm`, `/approve` or merged PR in kubernetes/kubernetes in the last year; it does not model alias membership changes.
+- 50 tests (`pytest`); the ones that need the built graph skip in CI, where only the OWNERS data is loaded.
 
 ## Use of AI coding assistants
 

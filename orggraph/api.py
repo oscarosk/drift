@@ -8,6 +8,8 @@ Web API + UI for Drift.
   GET  /api/dir?path=...     who_owns + who_knows + drafted fix for one directory
   GET  /api/cleanup          drafted fixes for the most drifted directories
   POST /api/patch            {dirs: [...]} -> a git-apply-able patch (download)
+  POST /api/checkfix         {dirs: [...]} -> apply those drafts to a graph copy: what gets unstuck, what breaks
+  POST /api/whatif           {handles: "@a @b"} -> if they stepped back, where approval would get stuck
   GET  /api/summary          org-wide numbers + backtest results
   GET  /api/health
 
@@ -16,6 +18,7 @@ Run:  uvicorn orggraph.api:app --port 8000      (then open http://localhost:8000
 from __future__ import annotations
 
 import collections
+import contextlib
 import json
 import os
 import threading
@@ -30,7 +33,13 @@ from orggraph.render import template
 from orggraph.tools import Tools
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
-app = FastAPI(title="Drift")
+@contextlib.asynccontextmanager
+async def lifespan(_app):
+    warm()
+    yield
+
+
+app = FastAPI(title="Drift", lifespan=lifespan)
 _agents: dict[str, Agent] = {}
 _tools: Tools | None = None
 _cache: dict = {}
@@ -67,14 +76,34 @@ def llm_allowed() -> bool:
         return _llm_day["n"] <= LLM_PER_DAY
 
 
-@app.on_event("startup")
+_model = {"status": "not configured"}
+
+
+def check_model():
+    """One tiny call so /api/health (and the server log) say whether the model is usable."""
+    a = Agent(session="health")
+    if not a.key:
+        return
+    try:
+        a._chat([{"role": "user", "content": "Reply with: ok"}])
+        _model["status"] = f"ok ({a.model})"
+    except Exception as e:
+        _model["status"] = f"unavailable: {e}"[:220]
+    print("model check:", _model["status"], flush=True)
+
+
 def warm():
     """Fill the caches in the background so the first visitor doesn't wait for them."""
     def run():
         try:
             areas(); cleanup(); summary()
+            _check_fix([x["dir"] for x in cleanup()["data"]["queue"]])
         except Exception as e:  # the app still works; the page will compute on demand
-            print("warm-up failed:", e)
+            print("warm-up failed:", e, flush=True)
+        try:
+            check_model()
+        except Exception as e:
+            print("model check failed:", e, flush=True)
     threading.Thread(target=run, daemon=True).start()
 
 
@@ -114,6 +143,10 @@ class Patch(BaseModel):
     dirs: list[str]
 
 
+class WhatIf(BaseModel):
+    handles: str
+
+
 @app.get("/")
 def index():
     return FileResponse(os.path.join(ROOT, "web", "index.html"))
@@ -122,7 +155,7 @@ def index():
 @app.get("/api/health")
 def health():
     try:
-        return {"ok": True, "as_of": tools().as_of}
+        return {"ok": True, "as_of": tools().as_of, "model": _model["status"]}
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=503)
 
@@ -184,6 +217,27 @@ def patch(body: Patch, request: Request):
         return JSONResponse({"error": out.note, "skipped": out.data.get("skipped", [])}, status_code=422)
     return PlainTextResponse(out.data["patch"], media_type="text/x-diff",
                              headers={"Content-Disposition": 'attachment; filename="drift-owners.patch"'})
+
+
+@app.post("/api/whatif")
+def what_if(body: WhatIf, request: Request):
+    """What if these people stepped back? Simulated on a GRAPH.COPY that is deleted afterwards."""
+    if (r := limited(request)):
+        return r
+    return _pack(tools().what_if(body.handles[:300]))
+
+
+@app.post("/api/checkfix")
+def check_fix(body: Patch, request: Request):
+    """Apply the drafted changes for these directories to a GRAPH.COPY and report what changes."""
+    if (r := limited(request)):
+        return r
+    return _check_fix(body.dirs)
+
+
+def _check_fix(dirs):
+    dirs = sorted({d for d in dirs if isinstance(d, str)})[:60]
+    return cached(("checkfix", tuple(dirs)), lambda: _pack(tools().check_fix(dirs)))
 
 
 @app.get("/api/summary")

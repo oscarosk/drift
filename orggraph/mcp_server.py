@@ -92,6 +92,31 @@ def working_group(path: str) -> dict:
 
 
 @server.tool(annotations=READ_ONLY)
+def what_if(handles: str) -> dict:
+    """What if these people (GitHub handles, e.g. "@deads2k") stepped back? Simulated on a copy of the
+    graph (GRAPH.COPY), which is deleted afterwards: areas whose approval would wait only on silent
+    approvers, where approval moves up the OWNERS chain, and who already reviews there."""
+    return _out(tools().what_if(handles))
+
+
+@server.tool(annotations=READ_ONLY)
+def check_fix(dirs: list[str]) -> dict:
+    """Apply Drift's drafted OWNERS changes for these directories to a copy of the graph and report which
+    areas get unstuck and whether any would be left waiting on silent approvers. Nothing real changes."""
+    return _out(tools().check_fix(dirs))
+
+
+@server.tool(annotations=READ_ONLY)
+def recall(path: str = "", handle: str = "", kep: int | None = None) -> dict:
+    """What Drift has already established about a directory, person or KEP, in earlier sessions by any
+    client (the web app, the CLI agent or another MCP client): the remembered answers, when, and who they named."""
+    from orggraph.memory import Memory
+    m = Memory().recall(path=path or None, handle=handle or None, kep=kep)
+    return {"outcome": "answered_from_memory" if m else "not_in_graph", "findings": m,
+            "note": "" if m else "Nothing remembered about that yet."}
+
+
+@server.tool(annotations=READ_ONLY)
 def owners_patch(dirs: list[str]) -> dict:
     """A git-apply-able patch of drafted OWNERS changes for these directories, with evidence in its header.
     Returned as text for a human to review; nothing is applied."""
