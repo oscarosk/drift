@@ -1,0 +1,691 @@
+{
+  "test_window": [
+    "2026-07-16",
+    "2026-10-16"
+  ],
+  "prs_in_window_with_an_approver": 556,
+  "sampled": 400,
+  "seed": 7,
+  "method": "Predictions use only activity merged before each PR. Truth = people who /approve'd the PR (approver) or reviewed, /lgtm'd or /approve'd it (reviewer); the PR author never counts. OWNERS = approvers in the nearest OWNERS file(s) with approvers (today's files); its @1/@3 are exact expectations of a random pick, since OWNERS does not rank people.",
+  "approver": {
+    "drift@1": {
+      "rate": 0.532,
+      "ci95": [
+        0.484,
+        0.581
+      ]
+    },
+    "drift@3": {
+      "rate": 0.777,
+      "ci95": [
+        0.734,
+        0.816
+      ]
+    },
+    "owners@1_random": {
+      "rate": 0.134
+    },
+    "owners@3_random": {
+      "rate": 0.375
+    },
+    "owners_anywhere_in_list": {
+      "rate": 0.89,
+      "ci95": [
+        0.856,
+        0.917
+      ]
+    },
+    "popular@3": {
+      "rate": 0.463,
+      "ci95": [
+        0.414,
+        0.511
+      ]
+    }
+  },
+  "reviewer": {
+    "drift@1": {
+      "rate": 0.575,
+      "ci95": [
+        0.526,
+        0.623
+      ]
+    },
+    "drift@3": {
+      "rate": 0.812,
+      "ci95": [
+        0.771,
+        0.848
+      ]
+    },
+    "owners@1_random": {
+      "rate": 0.155
+    },
+    "owners@3_random": {
+      "rate": 0.415
+    },
+    "owners_anywhere_in_list": {
+      "rate": 0.91,
+      "ci95": [
+        0.878,
+        0.934
+      ]
+    },
+    "popular@3": {
+      "rate": 0.497,
+      "ci95": [
+        0.449,
+        0.546
+      ]
+    }
+  },
+  "examples": [
+    {
+      "pr": 121910,
+      "merged": "2026-09-17",
+      "dirs": [
+        "pkg/volume"
+      ],
+      "approved_by": [
+        "jsafrane"
+      ],
+      "drift_top3": [
+        "xing-yang",
+        "dims",
+        "jsafrane"
+      ],
+      "owners_listed": 6,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "jpbetz"
+      ]
+    },
+    {
+      "pr": 129125,
+      "merged": "2026-07-22",
+      "dirs": [
+        "staging/src/k8s.io/client-go",
+        "staging/src/k8s.io/client-go/tools/record",
+        "staging/src/k8s.io/client-go/tools/events",
+        "staging/src/k8s.io/client-go/tools/portforward",
+        "staging/src/k8s.io/client-go/transport",
+        "staging/src/k8s.io/apimachinery/pkg/apis/meta/v1",
+        "staging/src/k8s.io/apimachinery/pkg/util/validation",
+        "staging/src/k8s.io/apimachinery/pkg/util",
+        "staging/src/k8s.io/apimachinery/pkg",
+        "hack"
+      ],
+      "approved_by": [
+        "dims",
+        "liggitt",
+        "sttts"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "aojea",
+        "jpbetz"
+      ],
+      "owners_listed": 27,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "macsko"
+      ]
+    },
+    {
+      "pr": 134037,
+      "merged": "2026-07-20",
+      "dirs": [
+        "staging/src/k8s.io/apiserver/pkg/registry/generic",
+        "staging/src/k8s.io/apimachinery/pkg/apis/meta/v1",
+        "test/integration/controlplane"
+      ],
+      "approved_by": [
+        "deads2k"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "jpbetz",
+        "deads2k"
+      ],
+      "owners_listed": 7,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "macsko"
+      ]
+    },
+    {
+      "pr": 134639,
+      "merged": "2026-07-24",
+      "dirs": [
+        "pkg/kubelet",
+        "test/e2e/node",
+        "staging/src/k8s.io/api",
+        "pkg/registry/core/node",
+        "pkg/features",
+        "pkg/generated/openapi",
+        "staging/src/k8s.io/client-go/applyconfigurations",
+        "test/e2e/feature",
+        "test/compatibility_lifecycle/reference",
+        "api",
+        "pkg/apis/core"
+      ],
+      "approved_by": [
+        "dchen1107",
+        "thockin"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "msau42",
+        "dom4ha"
+      ],
+      "owners_listed": 53,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "macsko"
+      ]
+    },
+    {
+      "pr": 135338,
+      "merged": "2026-08-27",
+      "dirs": [
+        "test/e2e/dra",
+        "pkg/serviceaccount",
+        "pkg/registry/core/serviceaccount",
+        "pkg/registry/core",
+        "pkg/features",
+        "test/e2e/auth",
+        "test/compatibility_lifecycle/reference"
+      ],
+      "approved_by": [
+        "liggitt"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "dims",
+        "jpbetz"
+      ],
+      "owners_listed": 51,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "macsko"
+      ]
+    },
+    {
+      "pr": 135486,
+      "merged": "2026-09-17",
+      "dirs": [
+        "pkg/scheduler",
+        "staging/src/k8s.io/kube-scheduler/extender",
+        "staging/src/k8s.io/kube-scheduler"
+      ],
+      "approved_by": [
+        "liggitt",
+        "macsko"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "macsko",
+        "dom4ha"
+      ],
+      "owners_listed": 16,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "jpbetz"
+      ]
+    },
+    {
+      "pr": 135735,
+      "merged": "2026-07-21",
+      "dirs": [
+        "staging/src/k8s.io/client-go"
+      ],
+      "approved_by": [
+        "liggitt"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "jpbetz",
+        "dims"
+      ],
+      "owners_listed": 8,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "macsko"
+      ]
+    },
+    {
+      "pr": 135931,
+      "merged": "2026-08-26",
+      "dirs": [
+        "hack/kube-api-linter",
+        "hack"
+      ],
+      "approved_by": [
+        "liggitt"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "dims",
+        "jpbetz"
+      ],
+      "owners_listed": 18,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "macsko"
+      ]
+    },
+    {
+      "pr": 136029,
+      "merged": "2026-10-16",
+      "dirs": [
+        "pkg/controller/volume"
+      ],
+      "approved_by": [
+        "jsafrane"
+      ],
+      "drift_top3": [
+        "jsafrane",
+        "gnufied",
+        "liggitt"
+      ],
+      "owners_listed": 6,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "jpbetz"
+      ]
+    },
+    {
+      "pr": 136159,
+      "merged": "2026-10-02",
+      "dirs": [
+        "staging/src/k8s.io/apiextensions-apiserver/pkg/apis"
+      ],
+      "approved_by": [
+        "dims",
+        "liggitt"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "jpbetz",
+        "skitt"
+      ],
+      "owners_listed": 6,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "jpbetz"
+      ]
+    },
+    {
+      "pr": 136779,
+      "merged": "2026-08-28",
+      "dirs": [
+        "staging/src/k8s.io/code-generator"
+      ],
+      "approved_by": [
+        "jpbetz"
+      ],
+      "drift_top3": [
+        "jpbetz",
+        "liggitt",
+        "dims"
+      ],
+      "owners_listed": 4,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "macsko"
+      ]
+    },
+    {
+      "pr": 136844,
+      "merged": "2026-08-26",
+      "dirs": [
+        "staging/src/k8s.io/api",
+        "pkg/generated/openapi",
+        "api",
+        "hack/kube-api-linter",
+        "hack"
+      ],
+      "approved_by": [
+        "liggitt"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "dom4ha",
+        "dims"
+      ],
+      "owners_listed": 19,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "macsko"
+      ]
+    },
+    {
+      "pr": 136961,
+      "merged": "2026-10-04",
+      "dirs": [
+        "test/e2e/apimachinery"
+      ],
+      "approved_by": [
+        "aojea"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "pohly",
+        "wojtek-t"
+      ],
+      "owners_listed": 6,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "jpbetz"
+      ]
+    },
+    {
+      "pr": 137038,
+      "merged": "2026-10-08",
+      "dirs": [
+        "staging/src/k8s.io/apiextensions-apiserver",
+        "pkg/generated/openapi",
+        "staging/src/k8s.io/api/autoscaling",
+        "staging/src/k8s.io/client-go/applyconfigurations",
+        "api",
+        "hack/kube-api-linter",
+        "hack"
+      ],
+      "approved_by": [
+        "liggitt"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "jpbetz",
+        "thockin"
+      ],
+      "owners_listed": 19,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "jpbetz"
+      ]
+    },
+    {
+      "pr": 137106,
+      "merged": "2026-07-16",
+      "dirs": [
+        "staging/src/k8s.io/api",
+        "pkg/generated/openapi",
+        "staging/src/k8s.io/client-go/applyconfigurations",
+        "api",
+        "hack/kube-api-linter",
+        "hack"
+      ],
+      "approved_by": [
+        "liggitt"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "dims",
+        "pohly"
+      ],
+      "owners_listed": 19,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "macsko"
+      ]
+    },
+    {
+      "pr": 137264,
+      "merged": "2026-10-03",
+      "dirs": [
+        "staging/src/k8s.io/apimachinery"
+      ],
+      "approved_by": [
+        "liggitt"
+      ],
+      "drift_top3": [
+        "jpbetz",
+        "liggitt",
+        "dims"
+      ],
+      "owners_listed": 6,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "jpbetz"
+      ]
+    },
+    {
+      "pr": 137536,
+      "merged": "2026-07-22",
+      "dirs": [
+        "pkg/proxy",
+        "vendor",
+        "pkg/features",
+        "LICENSES",
+        "vendor/sigs.k8s.io/knftables",
+        "test/compatibility_lifecycle/reference",
+        "."
+      ],
+      "approved_by": [
+        "danwinship"
+      ],
+      "drift_top3": [
+        "dims",
+        "liggitt",
+        "jpbetz"
+      ],
+      "owners_listed": 49,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "macsko"
+      ]
+    },
+    {
+      "pr": 137546,
+      "merged": "2026-07-21",
+      "dirs": [
+        "pkg/registry/resource",
+        "pkg/features",
+        "test/integration/dra",
+        "test/compatibility_lifecycle/reference"
+      ],
+      "approved_by": [
+        "liggitt"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "pohly",
+        "dom4ha"
+      ],
+      "owners_listed": 51,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "macsko"
+      ]
+    },
+    {
+      "pr": 137762,
+      "merged": "2026-07-22",
+      "dirs": [
+        "pkg/probe",
+        "pkg/kubelet",
+        "test/e2e/common/node",
+        "staging/src/k8s.io/api",
+        "pkg/apis/core/v1",
+        "pkg/features",
+        "pkg/api/pod",
+        "pkg/generated/openapi",
+        "staging/src/k8s.io/client-go/applyconfigurations",
+        "test/compatibility_lifecycle/reference",
+        "api",
+        "pkg/apis/core/validation",
+        "pkg/apis/core"
+      ],
+      "approved_by": [
+        "jpbetz",
+        "liggitt",
+        "sergeykanzhelev"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "dom4ha",
+        "dims"
+      ],
+      "owners_listed": 52,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "macsko"
+      ]
+    },
+    {
+      "pr": 137944,
+      "merged": "2026-07-20",
+      "dirs": [
+        "pkg/scheduler"
+      ],
+      "approved_by": [
+        "ania-borowiec"
+      ],
+      "drift_top3": [
+        "macsko",
+        "liggitt",
+        "dom4ha"
+      ],
+      "owners_listed": 8,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "macsko"
+      ]
+    },
+    {
+      "pr": 138096,
+      "merged": "2026-07-16",
+      "dirs": [
+        "pkg/kubelet"
+      ],
+      "approved_by": [
+        "tallclair"
+      ],
+      "drift_top3": [
+        "sergeykanzhelev",
+        "liggitt",
+        "dims"
+      ],
+      "owners_listed": 9,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "macsko"
+      ]
+    },
+    {
+      "pr": 138129,
+      "merged": "2026-09-17",
+      "dirs": [
+        "staging/src/k8s.io/api/authentication",
+        "staging/src/k8s.io/api",
+        "staging/src/k8s.io/sample-apiserver",
+        "staging/src/k8s.io/code-generator",
+        "staging/src/k8s.io/api/storage",
+        "staging/src/k8s.io/api/resource",
+        "test/integration/etcd"
+      ],
+      "approved_by": [
+        "liggitt"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "jpbetz",
+        "dims"
+      ],
+      "owners_listed": 9,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "jpbetz"
+      ]
+    },
+    {
+      "pr": 138176,
+      "merged": "2026-07-17",
+      "dirs": [
+        "pkg/scheduler",
+        "hack/tools/instrumentation/testdata",
+        "hack/tools/instrumentation"
+      ],
+      "approved_by": [
+        "richabanker",
+        "sanposhiho"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "pohly",
+        "richabanker"
+      ],
+      "owners_listed": 14,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "macsko"
+      ]
+    },
+    {
+      "pr": 138219,
+      "merged": "2026-09-22",
+      "dirs": [
+        "staging/src/k8s.io/apiserver"
+      ],
+      "approved_by": [
+        "liggitt"
+      ],
+      "drift_top3": [
+        "liggitt",
+        "serathius",
+        "jpbetz"
+      ],
+      "owners_listed": 5,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "jpbetz"
+      ]
+    },
+    {
+      "pr": 138307,
+      "merged": "2026-10-15",
+      "dirs": [
+        "staging/src/k8s.io/apiserver/pkg/storage"
+      ],
+      "approved_by": [
+        "serathius"
+      ],
+      "drift_top3": [
+        "serathius",
+        "wojtek-t",
+        "liggitt"
+      ],
+      "owners_listed": 3,
+      "popular_top3": [
+        "liggitt",
+        "dims",
+        "jpbetz"
+      ]
+    }
+  ]
+}

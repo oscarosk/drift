@@ -80,10 +80,14 @@ def main():
 
     try:
         g.query("CREATE INDEX FOR (p:PR) ON (p.number)")
-        g.query("CREATE INDEX FOR (p:PR) ON (p.merged)")
+        g.query("CREATE INDEX FOR (p:PR) ON (p.day)")
     except Exception:
         pass
-    run_batched(g, "UNWIND $rows AS r MERGE (p:PR {number: r.number}) SET p.merged = r.merged", prs)
+    # `day` (e.g. 20260910) is what every date filter uses: on FalkorDB 4.18 an index range scan on a
+    # string property ignores the upper bound, while integer ranges are correct (see README).
+    for x in prs:
+        x["day"] = int(x["merged"].replace("-", ""))
+    run_batched(g, "UNWIND $rows AS r MERGE (p:PR {number: r.number}) SET p.merged = r.merged, p.day = r.day", prs)
     run_batched(g, """
         UNWIND $rows AS r
         MATCH (pr:PR {number: r.pr})

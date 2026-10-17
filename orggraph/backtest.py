@@ -33,7 +33,7 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "results", "backtest.json")
 Q_APPROVER_ACTIVITY = f"""
 MATCH (p:Person)-[:APPROVER_OF]->(:Dir)
 WITH DISTINCT p
-OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR) WHERE pr.merged >= $since
+OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR) WHERE pr.day >= $since_day
 RETURN p.handle AS person, count(DISTINCT pr) AS prs"""
 
 # Approver listings per (person, dir), for checking who was removed where.
@@ -45,7 +45,7 @@ RETURN p.handle, d.path"""
 # Everyone ranked by how much reviewing they did; owners are filtered out in Python using
 # Q_LISTED_PEOPLE (a per-row "NOT (p)-[...]->()" check here was too slow on large graphs).
 Q_SHADOW_PEOPLE = f"""
-MATCH (p:Person)-[:{REVIEW_ACT}]->(pr:PR) WHERE pr.merged >= $since
+MATCH (p:Person)-[:{REVIEW_ACT}]->(pr:PR) WHERE pr.day >= $since_day
 WITH p, count(DISTINCT pr) AS reviewed
 RETURN p.handle AS person, reviewed ORDER BY reviewed DESC, person"""
 
@@ -54,7 +54,9 @@ Q_LISTED_PEOPLE = "MATCH (p:Person)-[:APPROVER_OF|REVIEWER_OF]->(:Dir) RETURN DI
 
 def rows(g, q, params=None):
     # Explicit 60 s limit: FalkorDB's default query timeout can be lower than this needs.
-    return g.ro_query(q, params or {}, timeout=60000).result_set
+    params = dict(params or {})
+    params.update({k + "_day": int(v.replace("-", "")) for k, v in list(params.items()) if isinstance(v, str) and len(v) == 10})
+    return g.ro_query(q, params, timeout=60000).result_set
 
 
 def main():

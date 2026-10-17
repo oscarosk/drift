@@ -135,6 +135,7 @@ def patch(body: Patch):
 @app.get("/api/summary")
 def summary():
     s = cached("summary", lambda: _pack(tools().drift_summary(limit=12)))
-    bt_path = os.path.join(ROOT, "results", "backtest.json")
-    backtest = json.load(open(bt_path, encoding="utf-8")) if os.path.exists(bt_path) else None
-    return {"summary": s, "backtest": backtest}
+    def load(name):
+        path = os.path.join(ROOT, "results", name)
+        return json.load(open(path, encoding="utf-8")) if os.path.exists(path) else None
+    return {"summary": s, "backtest": load("backtest.json"), "reviewer_eval": load("reviewer_eval.json")}

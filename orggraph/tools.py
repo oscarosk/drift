@@ -49,7 +49,11 @@ class Tools:
     # ---- plumbing ---------------------------------------------------------------------
     def q(self, name: str, cypher: str, params: dict | None = None):
         t = time.perf_counter()
-        rows = self.g.ro_query(cypher, params or {}, timeout=TIMEOUT_MS).result_set
+        params = dict(params or {})
+        for k, v in list(params.items()):  # every ISO date also gets an integer twin: $since -> $since_day
+            if isinstance(v, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
+                params[k + "_day"] = int(v.replace("-", ""))
+        rows = self.g.ro_query(cypher, params, timeout=TIMEOUT_MS).result_set
         self._trace.append({"query": name, "ms": round((time.perf_counter() - t) * 1000, 1), "rows": len(rows)})
         return rows
 
@@ -165,15 +169,15 @@ class Tools:
         listed = self.q("listed_activity", f"""
             MATCH (p:Person)-[r:APPROVER_OF]->(d:Dir {{repo: 'kubernetes', path: $p}})
             OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR)-[:TOUCHES]->(:Dir)-[:INSIDE*0..10]->(d)
-              WHERE pr.merged >= $since
+              WHERE pr.day >= $since_day
             WITH p, r, d, count(DISTINCT pr) AS here
-            OPTIONAL MATCH (p)-[:{ACT}]->(pr2:PR) WHERE pr2.merged >= $since
+            OPTIONAL MATCH (p)-[:{ACT}]->(pr2:PR) WHERE pr2.day >= $since_day
             RETURN p.handle, r.via, here, count(DISTINCT pr2) AS anywhere
             ORDER BY here, anywhere, p.handle""", {"p": d, "since": since})
         shadows = self.q("shadow_owners", f"""
             MATCH (d:Dir {{repo: 'kubernetes', path: $p}})
             MATCH (p:Person)-[a:{ACT}]->(pr:PR)-[:TOUCHES]->(:Dir)-[:INSIDE*0..10]->(d)
-              WHERE pr.merged >= $since
+              WHERE pr.day >= $since_day
             WITH d, p, a, pr ORDER BY pr.merged DESC
             WITH d, p, count(DISTINCT pr) AS prs, collect(DISTINCT type(a)) AS how,
                  collect(DISTINCT pr.number)[..3] AS examples
@@ -206,18 +210,18 @@ class Tools:
         org = self.q("org_silent", f"""
             MATCH (p:Person)-[:APPROVER_OF]->(:Dir)
             WITH DISTINCT p
-            OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR) WHERE pr.merged >= $since
+            OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR) WHERE pr.day >= $since_day
             WITH p, count(DISTINCT pr) AS n
             RETURN count(p), sum(CASE WHEN n = 0 THEN 1 ELSE 0 END)""", {"since": since})[0]
         worst = self.q("worst_dirs", f"""
             MATCH (p:Person)-[:APPROVER_OF]->(:Dir)
             WITH DISTINCT p
-            OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR) WHERE pr.merged >= $since
+            OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR) WHERE pr.day >= $since_day
             WITH p, count(DISTINCT pr) = 0 AS silent
             MATCH (p)-[:APPROVER_OF]->(d:Dir) WHERE d.has_owners
             WITH d, count(p) AS approvers, sum(CASE WHEN silent THEN 1 ELSE 0 END) AS silent
             WHERE silent > 0
-            OPTIONAL MATCH (x:PR)-[:TOUCHES]->(d) WHERE x.merged >= $since
+            OPTIONAL MATCH (x:PR)-[:TOUCHES]->(d) WHERE x.day >= $since_day
             WITH d, approvers, silent, count(x) AS prs
             WHERE prs > 0
             RETURN d.path, approvers, silent, prs
@@ -240,7 +244,7 @@ class Tools:
         rows = self.q("route_candidates", """
             MATCH (d:Dir {repo: 'kubernetes', path: $p})
             MATCH (p:Person)-[a:REVIEWED|LGTM|APPROVED_PR]->(pr:PR)-[:TOUCHES]->(:Dir)-[:INSIDE*0..10]->(d)
-              WHERE pr.merged >= $since
+              WHERE pr.day >= $since_day
             WITH d, p, a, pr ORDER BY pr.merged DESC
             WITH d, p, count(DISTINCT pr) AS reviewed, sum(CASE WHEN type(a) = 'APPROVED_PR' THEN 1 ELSE 0 END) AS approvals,
                  max(pr.merged) AS last, collect(DISTINCT pr.number)[..3] AS examples
@@ -274,7 +278,7 @@ class Tools:
                    collect(DISTINCT {stage: m.stage, version: v.version})""", {"n": n})[0]
         people = self.q("kep_people", f"""
             MATCH (p:Person)-[r:AUTHORED|REVIEWED_KEP|APPROVED_KEP]->(:KEP {{number: $n}})
-            OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR) WHERE pr.merged >= $since
+            OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR) WHERE pr.day >= $since_day
             RETURN p.handle, collect(DISTINCT type(r)), count(DISTINCT pr)""", {"n": n, "since": since})
         related = self.q("kep_related", """
             MATCH path = (k:KEP {number: $n})-[:SEE_ALSO|REPLACES|SUPERSEDED_BY*1..2]-(o:KEP)
@@ -333,7 +337,8 @@ class Tools:
                             paths=k.paths, note=k.note)
 
     # ---- tool 7: reviewers for a change ----------------------------------------------------
-    def suggest_reviewers(self, paths: str | list | None = None, pr: int | None = None, months: int = 6) -> Answer:
+    def suggest_reviewers(self, paths: str | list | None = None, pr: int | None = None, months: int = 6,
+                          until: str | None = None, exclude: list | None = None, with_owners: bool = True) -> Answer:
         """Who should review a change touching these files (or a merged PR by number): people
         with recent review and approval work in the affected areas, plus whether each area's
         listed approvers are still active."""
@@ -362,22 +367,32 @@ class Tools:
                 notes.append("Not found in the graph: " + ", ".join(unknown[:5]))
             if not dirs:
                 return self._answer("unknown_entity", "suggest_reviewers", args, note=" ".join(notes))
-        since, since12 = self.since(months), self.since(12)
+        # `until` (exclusive) lets the evaluation ask "what would Drift have said before this PR?"
+        if until:
+            end = dt.date.fromisoformat(until)
+            since = (end - dt.timedelta(days=round(months * 30.44))).isoformat()
+            since12 = (end - dt.timedelta(days=365)).isoformat()
+        else:
+            until, (since, since12) = "9999-12-31", (self.since(months), self.since(12))
+        exclude = [h.lower() for h in (exclude or [])]
         people, areas = {}, []
         for d in dirs[:15]:
             cand = self.q("reviewers_for_dir", """
                 MATCH (d:Dir {repo: 'kubernetes', path: $p})
                 MATCH (p:Person)-[a:REVIEWED|LGTM|APPROVED_PR]->(pr:PR)-[:TOUCHES]->(:Dir)-[:INSIDE*0..10]->(d)
-                  WHERE pr.merged >= $since AND NOT p.handle IN $exclude
+                  WHERE pr.day >= $since_day AND pr.day < $until_day AND NOT p.handle IN $exclude
                 WITH p, a, pr ORDER BY pr.merged DESC
                 WITH p, count(DISTINCT pr) AS reviewed, sum(CASE WHEN type(a) = 'APPROVED_PR' THEN 1 ELSE 0 END) AS approvals,
                      max(pr.merged) AS last, collect(DISTINCT pr.number)[..2] AS examples
                 RETURN p.handle, reviewed, approvals, last, examples ORDER BY approvals DESC, reviewed DESC LIMIT 8""",
-                         {"p": d, "since": since, "exclude": []})
-            official = self.q("official_status", f"""
+                         {"p": d, "since": since, "until": until, "exclude": exclude})
+            if not with_owners:
+                official = []
+            else:
+                official = self.q("official_status", f"""
                 MATCH (p:Person)-[:APPROVER_OF]->(:Dir)<-[:INSIDE*0..10]-(:Dir {{repo: 'kubernetes', path: $p}})
                 WITH DISTINCT p
-                OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR) WHERE pr.merged >= $since
+                OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR) WHERE pr.day >= $since_day
                 RETURN p.handle, count(DISTINCT pr)""", {"p": d, "since": since12})
             areas.append({"dir": d, "approvers": len(official),
                           "silent_approvers": sorted(h for h, n in official if n == 0)})
@@ -409,17 +424,17 @@ class Tools:
         rows = self.q("areas", f"""
             MATCH (p:Person)-[:APPROVER_OF]->(:Dir)
             WITH DISTINCT p
-            OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR) WHERE pr.merged >= $since
+            OPTIONAL MATCH (p)-[:{ACT}]->(pr:PR) WHERE pr.day >= $since_day
             WITH p, count(DISTINCT pr) = 0 AS silent
             MATCH (p)-[r:APPROVER_OF]->(d:Dir) WHERE d.has_owners
             WITH d, count(p) AS approvers, sum(CASE WHEN silent THEN 1 ELSE 0 END) AS silent,
                  sum(CASE WHEN silent AND r.via = 'direct' THEN 1 ELSE 0 END) AS silent_direct
-            OPTIONAL MATCH (x:PR)-[:TOUCHES]->(d) WHERE x.merged >= $since
+            OPTIONAL MATCH (x:PR)-[:TOUCHES]->(d) WHERE x.day >= $since_day
             RETURN d.path, approvers, silent, silent_direct, count(x) AS prs""", {"since": since})
         listed = {r[0] for r in rows}
         rest = self.q("areas_unlisted", f"""
             MATCH (d:Dir {{repo: 'kubernetes'}}) WHERE d.has_owners AND NOT d.path IN $listed
-            OPTIONAL MATCH (x:PR)-[:TOUCHES]->(d) WHERE x.merged >= $since
+            OPTIONAL MATCH (x:PR)-[:TOUCHES]->(d) WHERE x.day >= $since_day
             RETURN d.path, count(x)""", {"since": since, "listed": list(listed)})
         items = [{"dir": a, "approvers": b, "silent": int(c), "silent_direct": int(e), "prs": f} for a, b, c, e, f in rows]
         items += [{"dir": a, "approvers": 0, "silent": 0, "silent_direct": 0, "prs": b} for a, b in rest]

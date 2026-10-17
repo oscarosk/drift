@@ -2,6 +2,9 @@
 
 **Your ownership records are already out of date. Drift shows where, proves it, and drafts the fix.**
 
+On 400 recent Kubernetes PRs, Drift's top 3 suggested reviewers included the person who actually
+approved the change **78%** of the time. Picking from the OWNERS files: **38%**.
+
 Every large engineering organisation writes down who owns what: CODEOWNERS, OWNERS files, team
 pages. Then people move on, new people quietly take over, and the records stop matching reality.
 Drift is a company brain built on [FalkorDB](https://www.falkordb.com/) that compares **what the
@@ -14,6 +17,25 @@ approvals, all public.
 Tracks: **Company Brain** (primary), **Agents That Act on Connected Data**.
 
 > Status: work in progress during Graph Hacks (Oct 15–18, 2026).
+
+## Does it work? Measured on 400 real PRs
+
+Tested on 400 Kubernetes PRs merged between 2026-07-16 and 2026-10-16. For each one, Drift suggested
+reviewers using **only activity from before that PR**, and we checked against who actually typed `/approve`:
+
+| Method | Right person first | Right person in top 3 |
+|---|---|---|
+| **Drift** (Find a reviewer) | **53%** | **78%** (95% CI 73–82%) |
+| Pick from the OWNERS files (what the records say) | 13% | 38% |
+| Ask the busiest approvers | n/a | 46% |
+
+OWNERS files don't rank people, so their figures are the exact chance that a pick from the nearest
+OWNERS files includes the right approver (today's files, which slightly favours them). Re-run with
+`python -m orggraph.eval_reviewers`; results in [`results/reviewer_eval.json`](results/reviewer_eval.json).
+
+An earlier run said 86%. That number was wrong: a FalkorDB index bug (below) let activity from after
+each PR leak into the prediction. The figure above is after the fix, and `tests/test_eval_no_leak.py`
+keeps it that way.
 
 ## What it found
 
@@ -189,6 +211,14 @@ RETURN count(p) AS approvers, sum(CASE WHEN n = 0 THEN 1 ELSE 0 END) AS silent
 ```
 
 More queries are added here as the agent tools are built.
+
+## A FalkorDB issue we hit
+
+**An index range scan on a string property ignores the upper bound** (graph module 4.18.3). With an
+index on `PR.merged` (ISO date strings), `WHERE p.merged >= '2026-09-05' AND p.merged < '2026-09-10'`
+returned rows up to `2026-09-19`, and `p.merged < X` alone returned every row. Integer ranges are
+correct. Reproduce with `python scripts/repro_falkordb_range.py`. Workaround in Drift: every PR also
+stores `day` as an integer (`20260910`), and all date filters use it.
 
 ## Honest limits
 
