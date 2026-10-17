@@ -1,0 +1,352 @@
+{
+ "as_of": "2026-10-16",
+ "fix_check": {
+  "changes": 40,
+  "removed_listings": 56,
+  "stuck_before": 19,
+  "stuck_after": 7,
+  "unstuck": [
+   "pkg/kubelet/cm/cpumanager",
+   "staging/src/k8s.io/apiserver/pkg/endpoints",
+   "test/images/agnhost",
+   "staging/src/k8s.io/apimachinery/pkg/util",
+   "staging/src/k8s.io/apiserver/pkg/endpoints/discovery",
+   "staging/src/k8s.io/apiserver/pkg/endpoints/metrics",
+   "staging/src/k8s.io/apiserver/pkg/endpoints/filters",
+   "staging/src/k8s.io/kubectl/pkg/explain",
+   "test/images/busybox",
+   "staging/src/k8s.io/apiserver/pkg/endpoints/request",
+   "staging/src/k8s.io/apiserver/pkg/endpoints/handlers/metrics",
+   "staging/src/k8s.io/apiserver/pkg/endpoints/testing"
+  ],
+  "made_stuck": []
+ },
+ "single_step_back": [
+  {
+   "handle": "deads2k",
+   "stuck": 6,
+   "areas": [
+    "pkg/quota/v1/evaluator",
+    "pkg/quota/v1/install",
+    "staging/src/k8s.io/apiserver/pkg/quota/v1",
+    "test/integration/dryrun",
+    "pkg/quota/v1"
+   ]
+  },
+  {
+   "handle": "mkumatag",
+   "stuck": 3,
+   "areas": [
+    "test/images/kitten",
+    "test/images/nautilus",
+    "test/images/agnhost/nonewprivs"
+   ]
+  },
+  {
+   "handle": "aojea",
+   "stuck": 1,
+   "areas": [
+    "test/images/regression-issue-74839"
+   ]
+  },
+  {
+   "handle": "bowei",
+   "stuck": 1,
+   "areas": [
+    "cluster/addons/calico-policy-controller"
+   ]
+  },
+  {
+   "handle": "cblecker",
+   "stuck": 1,
+   "areas": [
+    "third_party/forked/shell2junit"
+   ]
+  },
+  {
+   "handle": "klueska",
+   "stuck": 1,
+   "areas": [
+    "pkg/kubelet/cm/topologymanager"
+   ]
+  },
+  {
+   "handle": "marosset",
+   "stuck": 1,
+   "areas": [
+    "test/e2e/windows"
+   ]
+  },
+  {
+   "handle": "roycaihw",
+   "stuck": 1,
+   "areas": [
+    "staging/src/k8s.io/apiserver/pkg/storageversion"
+   ]
+  },
+  {
+   "handle": "saad-ali",
+   "stuck": 1,
+   "areas": [
+    "pkg/volume/nfs"
+   ]
+  },
+  {
+   "handle": "wojtek-t",
+   "stuck": 1,
+   "areas": [
+    "staging/src/k8s.io/code-generator/cmd/client-gen"
+   ]
+  },
+  {
+   "handle": "aaron-prindle",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "ahrtr",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "alexzielenski",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "andrewsykim",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "aravindhp",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "bart0sh",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "bentheelder",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "brianpursley",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "carlory",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "cheftako",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "cici37",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "damiansawicki",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "danwinship",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "daschott",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "dashpole",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "dchen1107",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "dims",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "eddiezane",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "enj",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "ffromani",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "gnufied",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "hirazawaui",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "humblec",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "jefftree",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "johnbelamaric",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "jpbetz",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "jsafrane",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "justaugustus",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "liggitt",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "luxas",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "mimowo",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "mrhohn",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "mrunalp",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "msau42",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "mtaufen",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "natasha41575",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "neolit123",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "nojnhuh",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "pacoxu",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "pohly",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "sataqiu",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "seans3",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "serathius",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "sergeykanzhelev",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "smarterclayton",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "soltysh",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "sttts",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "tallclair",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "thockin",
+   "stuck": 0,
+   "areas": []
+  },
+  {
+   "handle": "yujuhong",
+   "stuck": 0,
+   "areas": []
+  }
+ ]
+}
