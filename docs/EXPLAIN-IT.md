@@ -42,6 +42,11 @@ See the picture in the README (`docs/model.svg`). The important parts:
 - `(:Dir)-[:WORKS_WITH]->(:Dir)` and `Dir.group`: the working-group projection and its communities.
 - `(:Finding)-[:ABOUT]->(...)` and `(:Finding)-[:CITES]->(:Person)`: the agent's memory, in the same graph.
 - `PR.day` is the merge date as an integer (`20260910`). That exists because of a FalkorDB bug (section 7).
+- `(:SIG)-[:HAS_SUBPROJECT]->(:Subproject)`, and `(:KEP)` with its `FeatureGate`, `Component` and `Release`
+  nodes: the teams and the decision records. They come with the source files, and the `why` tool uses them
+  ("who decided this, how far did it get, are its approvers still active?"). The core product is the
+  people, PRs and directories; these give it the "tracing decisions back to their source" part of Company
+  Brain.
 
 Two graphs live side by side in one FalkorDB instance: `kubernetes` (today) and `kubernetes@2025-10-16`
 (the `OWNERS` files as they were a year ago, with only the activity before that date). The second one lets
@@ -188,6 +193,16 @@ detection is built in (`algo.labelPropagation`), and two graphs (today and a yea
 
 **What happens if you take FalkorDB out?** Nothing works: every answer, the evaluation, the drafted fixes and
 the what-if are graph queries. The site reports that it can't reach the graph.
+
+**Couldn't a plain lookup do this?** A lookup of the OWNERS file gives you the left column on an area page:
+who is listed. The right column (who actually does the work) only exists by walking person → PR → directory →
+parent directories, and the stuck/unstuck check needs the routing walk on two whole graphs. Those are the
+parts no single record holds.
+
+**What does it say when it doesn't know?** It says so. A typo (`who owns pkg/kublet`) or an unknown person
+(`what if @nosuchperson stepped back?`) returns `unknown_entity`: "not in the graph", with suggestions, and no
+traversal runs. A real directory with no recent activity returns `not_in_graph`, which is a different
+statement from "nobody owns it".
 
 **Does the model write queries?** No. It picks one of nine tools and fills in arguments. Names are resolved
 against the graph first, and its sentence is checked against the result.
