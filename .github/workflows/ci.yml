@@ -1,0 +1,27 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      falkordb:
+        image: falkordb/falkordb:latest
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      # Unit tests (render checker, OWNERS patcher). Graph tests skip: no activity data in CI.
+      - run: pytest -q
+      # Load the public org data (SIGs, OWNERS, KEPs) into a real FalkorDB to check the loaders still work.
+      - run: python scripts/fetch_data.py
+      - run: python -m orggraph.load_static
+      # Canary for the string-index range bug we hit: shows whether the current FalkorDB release still has it.
+      - run: python scripts/repro_falkordb_range.py

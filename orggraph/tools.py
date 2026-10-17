@@ -250,7 +250,7 @@ class Tools:
                  max(pr.merged) AS last, collect(DISTINCT pr.number)[..3] AS examples
             OPTIONAL MATCH (p)-[r:APPROVER_OF|REVIEWER_OF]->(:Dir)<-[:INSIDE*0..10]-(d)
             RETURN p.handle, reviewed, approvals, last, examples, collect(DISTINCT type(r))
-            ORDER BY approvals DESC, reviewed DESC LIMIT 5""", {"p": d, "since": since})
+            ORDER BY approvals DESC, reviewed DESC, p.handle LIMIT 5""", {"p": d, "since": since})
         if not rows:
             return self._answer("not_in_graph", "route", args, data={"dir": d, "since": since},
                                 note=f"No reviews or approvals on '{d}' since {since}; fall back to who_owns.")
@@ -384,7 +384,7 @@ class Tools:
                 WITH p, a, pr ORDER BY pr.merged DESC
                 WITH p, count(DISTINCT pr) AS reviewed, sum(CASE WHEN type(a) = 'APPROVED_PR' THEN 1 ELSE 0 END) AS approvals,
                      max(pr.merged) AS last, collect(DISTINCT pr.number)[..2] AS examples
-                RETURN p.handle, reviewed, approvals, last, examples ORDER BY approvals DESC, reviewed DESC LIMIT 8""",
+                RETURN p.handle, reviewed, approvals, last, examples ORDER BY approvals DESC, reviewed DESC, p.handle LIMIT 8""",
                          {"p": d, "since": since, "until": until, "exclude": exclude})
             if not with_owners:
                 official = []
@@ -405,7 +405,7 @@ class Tools:
                 e["areas"].append(d)
                 e["last_active"] = max(e["last_active"], last)
                 e["example_prs"] += [x for x in ex if x not in e["example_prs"]]
-        ranked = sorted(people.values(), key=lambda e: (-len(e["areas"]), -e["score"]))[:6]
+        ranked = sorted(people.values(), key=lambda e: (-len(e["areas"]), -e["score"], e["handle"]))[:6]
         if not ranked:
             return self._answer("not_in_graph", "suggest_reviewers", args, data={"areas": areas, "since": since},
                                 note=f"No reviews or approvals in these areas since {since}.")

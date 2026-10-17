@@ -8,7 +8,8 @@ from orggraph.tools import Tools
 def t():
     try:
         tools = Tools()
-        tools.as_of
+        if not tools.q("built", "MATCH (p:PR) RETURN count(p) > 0")[0][0]:
+            raise RuntimeError("no activity loaded")
     except Exception as e:  # pragma: no cover
         pytest.skip(f"graph not available: {e}")
     return tools

@@ -21,7 +21,18 @@ def run(*args):
     subprocess.run([PY, *args], cwd=ROOT, check=True)
 
 
+def check_db():
+    """Fail early with a plain message if FalkorDB isn't reachable."""
+    sys.path.insert(0, ROOT)
+    from orggraph.db import graph
+    try:
+        graph("drift_ping").query("RETURN 1")
+    except Exception as e:
+        sys.exit(f"Can't reach FalkorDB ({type(e).__name__}). Is Docker running?  Try:  docker compose up -d")
+
+
 def main():
+    check_db()
     if "--no-fetch" not in sys.argv:
         run("scripts/fetch_data.py")
         run("scripts/fetch_history.py")
