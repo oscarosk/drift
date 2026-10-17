@@ -41,8 +41,36 @@ def known_names(answer) -> tuple[set, set, set]:
     return {h.lower() for h in handles}, paths, keps
 
 
+NUMBER = re.compile(r"(?<![\w#@./-])(\d{2,}(?:\.\d+)?)%?(?![\w/-])")
+
+
+def known_numbers(answer) -> set:
+    """Every number in the tool result, plus derived counts the template states (list lengths)."""
+    blob = json.dumps(answer.to_dict(), default=str)
+    nums = set(re.findall(r"\d+(?:\.\d+)?", blob))
+
+    def walk(x):
+        if isinstance(x, dict):
+            for v in x.values():
+                walk(v)
+        elif isinstance(x, list):
+            nums.update({str(len(x)), str(max(len(x) - 1, 0))})      # "N areas", "N other areas"
+            for v in x:
+                walk(v)
+    walk(answer.data)
+    top = [v for v in (answer.data or {}).values() if isinstance(v, int) and not isinstance(v, bool) and v > 0]
+    nums.update(str(round(100 * a / b)) for a in top for b in top if a <= b)   # "31%" = silent / approvers
+    return nums
+
+
 def check(text: str, answer) -> tuple[bool, str]:
     handles, paths, keps = known_names(answer)
+    # numbers of 10 or more that aren't in the result (or a list length from it) are invented;
+    # years, dates and PR numbers are covered because they appear in the result too
+    clean = re.sub(r"\d{4}-\d{2}-\d{2}", "", text)
+    bad_nums = {n for n in NUMBER.findall(clean)} - known_numbers(answer)
+    if bad_nums:
+        return False, f"numbers not in the result: {sorted(bad_nums)}"
     invented = {h.lower() for h in HANDLE.findall(text)} - handles
     if invented:
         return False, f"named people not in the result: {sorted(invented)}"

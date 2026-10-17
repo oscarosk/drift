@@ -56,3 +56,10 @@ def test_check_fix_template_states_before_and_after():
         "changes": 3, "fixed": [{"dir": "a"}], "stuck": [], "moved": [], "stuck_before": 5, "stuck_after": 4, "safe": True})
     text = template(a)
     assert "5 before, 4 after" in text and check(text, a)[0]
+
+
+def test_rejects_invented_numbers():
+    a = knows_answer()
+    assert check("pkg/kubelet/cm/cpumanager: @bob worked on 22 merged PRs here.", a)[0]
+    ok, why = check("pkg/kubelet/cm/cpumanager: @bob worked on 57 merged PRs here.", a)
+    assert not ok and "57" in why
