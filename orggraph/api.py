@@ -115,7 +115,8 @@ def directory(path: str):
     if owns.outcome != "answered_with_path":
         return {"owns": _pack(owns)}
     d = owns.data["dir"]
-    return {"owns": _pack(owns), "knows": _pack(t.who_knows(d)), "draft": _pack(t.propose_owners_update(d))}
+    return {"owns": _pack(owns), "knows": _pack(t.who_knows(d)), "draft": _pack(t.propose_owners_update(d)),
+            "group": _pack(t.working_group(d))}
 
 
 @app.get("/api/cleanup")
@@ -138,4 +139,7 @@ def summary():
     def load(name):
         path = os.path.join(ROOT, "results", name)
         return json.load(open(path, encoding="utf-8")) if os.path.exists(path) else None
-    return {"summary": s, "backtest": load("backtest.json"), "reviewer_eval": load("reviewer_eval.json")}
+    groups = load("groups.json")
+    if groups:
+        groups = {k: groups[k] for k in ("as_of", "dirs_grouped", "cross_sig_groups", "check")} | {"count": len(groups["groups"])}
+    return {"summary": s, "backtest": load("backtest.json"), "reviewer_eval": load("reviewer_eval.json"), "groups": groups}

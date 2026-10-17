@@ -12,6 +12,7 @@ Every tool returns an Answer with one of four outcomes:
 """
 from __future__ import annotations
 
+import collections
 import datetime as dt
 import difflib
 import posixpath
@@ -411,8 +412,14 @@ class Tools:
                                 note=f"No reviews or approvals in these areas since {since}.")
         for e in ranked:
             e["example_prs"] = e["example_prs"][:3]
+        grp = self.q("groups_crossed", "MATCH (x:Dir {repo: 'kubernetes'}) WHERE x.path IN $d AND x.group IS NOT NULL "
+                     "RETURN DISTINCT x.group_name", {"d": dirs[:15]})
+        groups = sorted(r[0] for r in grp if r[0])
+        if len(groups) > 1:
+            notes.append(f"This change crosses {len(groups)} working groups ({', '.join(groups)}): "
+                         "changes like this need a second approver about three times as often, so look for one from each.")
         return self._answer("answered_with_path", "suggest_reviewers", args,
-                            data={"since": since, "people": ranked, "areas": areas},
+                            data={"since": since, "people": ranked, "areas": areas, "groups": groups},
                             paths=[[f"@{e['handle']}", f"reviewed PR #{e['example_prs'][0]}", e["areas"][0]] for e in ranked[:3] if e["example_prs"]],
                             note=" ".join(notes))
 
@@ -480,6 +487,41 @@ class Tools:
         return self._answer("answered_with_path" if out["patch"] else "not_in_graph", "owners_patch", {"dirs": dirs},
                             data=out, note="" if out["patch"] else "None of these directories had a change that could be applied safely.")
 
+    # ---- tool 10: working group (FalkorDB label propagation, built by orggraph.groups) -------
+    def working_group(self, path: str) -> Answer:
+        """The areas worked on by the same people as this one (a community found by
+        algo.labelPropagation over WORKS_WITH links), their SIG labels, and who does the work."""
+        d, extra = self.resolve_dir(path)
+        if not d:
+            return self._answer("unknown_entity", "working_group", {"path": path}, data={"suggestions": extra},
+                                note=f"No directory '{path}' with an OWNERS file in the graph.")
+        row = self.q("group_of", "MATCH (x:Dir {repo: 'kubernetes', path: $p}) RETURN x.group, x.group_name", {"p": d})
+        gid, name = row[0] if row else (None, None)
+        if gid is None:
+            return self._answer("not_in_graph", "working_group", {"path": d}, data={"dir": d},
+                                note=f"{d} isn't part of a working group: too few people work there and in other areas.")
+        members = self.q("group_members", """
+            MATCH (x:Dir {repo: 'kubernetes'}) WHERE x.group = $g
+            OPTIONAL MATCH (x)-[:LABELED]->(s:SIG)
+            RETURN x.path, collect(DISTINCT s.name) ORDER BY x.path""", {"g": gid})
+        links = self.q("group_links", """
+            MATCH (x:Dir {repo: 'kubernetes', path: $p})-[w:WORKS_WITH]-(y:Dir)
+            RETURN y.path, w.shared, w.people ORDER BY w.shared DESC, y.path LIMIT 6""", {"p": d})
+        people = self.q("group_people", """
+            MATCH (x:Dir {repo: 'kubernetes'}) WHERE x.group = $g
+            MATCH (p:Person)-[:REVIEWED|LGTM|APPROVED_PR]->(pr:PR)-[:TOUCHES]->(x) WHERE pr.day >= $since_day
+            WITH p, count(DISTINCT pr) AS n, count(DISTINCT x) AS areas
+            RETURN p.handle, n, areas ORDER BY n DESC, p.handle LIMIT 6""", {"g": gid, "since": self.since(12)})
+        own_sigs = next((sg for m, sg in members if m == d), [])
+        sigs = collections.Counter(s for _, sg in members for s in sg)
+        return self._answer("answered_with_path", "working_group", {"path": d}, data={
+            "dir": d, "group": gid, "name": name, "own_sigs": own_sigs,
+            "areas": [{"dir": m, "sigs": sg} for m, sg in members],
+            "sigs": [s for s, _ in sigs.most_common()],
+            "links": [{"dir": y, "shared": n, "people": ps} for y, n, ps in links],
+            "people": [{"handle": h, "prs": n, "areas": a} for h, n, a in people]},
+            paths=[[d, f"same people as {y} (e.g. @{ps[0]})"] for y, n, ps in links[:3] if ps])
+
 
 CATALOGUE = {
     "who_owns": {"fn": "who_owns", "args": {"path": "directory or file path in kubernetes/kubernetes"},
@@ -495,6 +537,8 @@ CATALOGUE = {
     "propose_owners_update": {"fn": "propose_owners_update",
                               "args": {"path": "directory path", "months": "int", "min_prs": "int, default 10"},
                               "desc": "Draft an OWNERS change for a directory with evidence for every line (a proposal, never applied)."},
+    "working_group": {"fn": "working_group", "args": {"path": "directory path"},
+                      "desc": "Areas worked on by the same people as this one (found with label propagation), their SIG labels and core people."},
     "suggest_reviewers": {"fn": "suggest_reviewers",
                           "args": {"paths": "file or directory paths, separated by spaces, commas or newlines",
                                    "pr": "int, a merged PR number (optional)", "months": "int 1-24, default 6"},
