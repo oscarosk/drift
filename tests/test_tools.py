@@ -63,7 +63,7 @@ def test_working_group_contains_the_area(t):
 
 
 SAMPLES = {"who_owns": {"path": "pkg/kubelet"}, "who_knows": {"path": "pkg/kubelet/cm/cpumanager"},
-           "drift_summary": {}, "route": {"path": "pkg/scheduler"}, "why": {"kep": 2340},
+           "drift_summary": {}, "why": {"kep": 2340},
            "propose_owners_update": {"path": "pkg/kubelet/cm/cpumanager"}, "what_if": {"handles": "@deads2k"},
            "working_group": {"path": "pkg/scheduler"}, "suggest_reviewers": {"paths": "pkg/kubelet/kubelet.go"}}
 

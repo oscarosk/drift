@@ -116,10 +116,6 @@ def template(answer) -> str:
         return (f"{d['silent']} of {d['approvers']} approvers ({d['silent'] / max(1, d['approvers']):.0%}) have no reviews, approvals or merged PRs "
                 f"in kubernetes/kubernetes since {d['since']}. Most affected: "
                 + "; ".join(f"{x['dir']} ({x['silent']}/{x['approvers']} silent, {x['prs']} PRs)" for x in w) + ".")
-    if t == "route":
-        p = d["people"]
-        return (f"For {d['dir']}, send it to {_people(p, n=3)}: they did the most review and approval work there since {d['since']} "
-                f"(@{p[0]['handle']}: {p[0]['reviewed']} PRs reviewed, last on {p[0]['last_active']}).")
     if t == "why":
         silent = [x for x in d["people"] if x["status"] == "silent"]
         appr = [x for x in d["people"] if "approver" in x["roles"]]

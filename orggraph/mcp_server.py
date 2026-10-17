@@ -20,7 +20,7 @@ server = MCPServer(
     name="drift",
     title="Drift: ownership drift for Kubernetes",
     instructions=("Answers who officially owns a directory of kubernetes/kubernetes, who actually does the "
-                  "work there, where ownership records have gone stale, who to route work to, and why a KEP "
+                  "work there, where ownership records have gone stale, who should review a change, and why a KEP "
                   "was decided. Every answer includes the graph path and the queries that produced it. "
                   "Activity covers merged PRs in kubernetes/kubernetes only."),
 )
@@ -57,12 +57,6 @@ def who_knows(path: str, months: int = 12) -> dict:
 def drift_summary(months: int = 12, limit: int = 10) -> dict:
     """Org-wide: share of approvers with no recent activity, and the directories where ownership is most stale."""
     return _out(tools().drift_summary(months, limit))
-
-
-@server.tool(annotations=READ_ONLY)
-def route(path: str, months: int = 6) -> dict:
-    """Who to send a new issue or PR in this area to, ranked by recent review and approval work, with example PRs."""
-    return _out(tools().route(path, months))
 
 
 @server.tool(annotations=READ_ONLY)

@@ -31,7 +31,7 @@ def test_rejects_invented_kep():
 
 
 def test_empty_result_must_say_so():
-    a = Answer("not_in_graph", "route", {"path": "x"}, note="nothing")
+    a = Answer("not_in_graph", "who_knows", {"path": "x"}, note="nothing")
     assert not check("Send it to the usual reviewers.", a)[0]
     assert check("The graph has no review activity there.", a)[0]
 

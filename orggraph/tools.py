@@ -123,7 +123,7 @@ class Tools:
             return None, []
         return (n, None) if self.q("resolve_kep", "MATCH (k:KEP {number: $n}) RETURN k.number", {"n": n}) else (None, [])
 
-    # ---- tool 1: who owns ----------------------------------------------------------------
+    # ---- who owns ----------------------------------------------------------------
     def who_owns(self, path: str) -> Answer:
         """Official ownership: the chain of OWNERS files from this directory up to the root,
         with approvers at each level, the teams (SIGs) labelling it and the subprojects owning it."""
@@ -156,7 +156,7 @@ class Tools:
         return self._answer("answered_with_path", "who_owns", args, data={"dir": d, "levels": levels},
                             paths=[path_nodes], note=extra)
 
-    # ---- tool 2: who really knows (the drift view of one directory) ------------------------
+    # ---- who really knows (the drift view of one directory) ------------------------
     def who_knows(self, path: str, months: int = 12) -> Answer:
         """Listed approvers with their recent activity here and anywhere ("silent" if zero),
         and unlisted people doing the work here ("shadow owners")."""
@@ -203,7 +203,7 @@ class Tools:
                             data={"dir": d, "since": since, "as_of": self.as_of, "approvers": approvers, "shadow_owners": shadow},
                             paths=paths, note=extra)
 
-    # ---- tool 3: org-wide drift --------------------------------------------------------
+    # ---- org-wide drift --------------------------------------------------------
     def drift_summary(self, months: int = 12, limit: int = 10) -> Answer:
         """How stale the ownership records are across the whole org, and where it's worst."""
         months, limit = max(1, min(int(months), 24)), max(1, min(int(limit), 25))
@@ -231,38 +231,7 @@ class Tools:
                             data={"since": since, "as_of": self.as_of, "approvers": org[0], "silent": int(org[1] or 0),
                                   "worst_dirs": [{"dir": a, "approvers": b, "silent": int(c), "prs": e} for a, b, c, e in worst]})
 
-    # ---- tool 4: route new work to the right people --------------------------------------
-    def route(self, path: str, months: int = 6) -> Answer:
-        """Who to send a new issue or PR in this area to: people with recent review and approval
-        work here, owners first, each with an example PR as evidence."""
-        months = max(1, min(int(months), 24))
-        args = {"path": path, "months": months}
-        d, extra = self.resolve_dir(path)
-        if not d:
-            return self._answer("unknown_entity", "route", args, data={"suggestions": extra},
-                                note=f"No directory '{path}' with an OWNERS file in the graph.")
-        since = self.since(months)
-        rows = self.q("route_candidates", """
-            MATCH (d:Dir {repo: 'kubernetes', path: $p})
-            MATCH (p:Person)-[a:REVIEWED|LGTM|APPROVED_PR]->(pr:PR)-[:TOUCHES]->(:Dir)-[:INSIDE*0..10]->(d)
-              WHERE pr.day >= $since_day
-            WITH d, p, a, pr ORDER BY pr.merged DESC
-            WITH d, p, count(DISTINCT pr) AS reviewed, sum(CASE WHEN type(a) = 'APPROVED_PR' THEN 1 ELSE 0 END) AS approvals,
-                 max(pr.merged) AS last, collect(DISTINCT pr.number)[..3] AS examples
-            OPTIONAL MATCH (p)-[r:APPROVER_OF|REVIEWER_OF]->(:Dir)<-[:INSIDE*0..10]-(d)
-            RETURN p.handle, reviewed, approvals, last, examples, collect(DISTINCT type(r))
-            ORDER BY approvals DESC, reviewed DESC, p.handle LIMIT 5""", {"p": d, "since": since})
-        if not rows:
-            return self._answer("not_in_graph", "route", args, data={"dir": d, "since": since},
-                                note=f"No reviews or approvals on '{d}' since {since}; fall back to who_owns.")
-        people = [{"handle": h, "reviewed": n, "approvals": int(ap), "last_active": last, "example_prs": ex,
-                   "listed_as": sorted({r.replace('_OF', '').lower() for r in roles}) or ["not listed"]}
-                  for h, n, ap, last, ex, roles in rows]
-        return self._answer("answered_with_path", "route", args, data={"dir": d, "since": since, "people": people},
-                            paths=[[f"@{p['handle']}", f"reviewed PR #{p['example_prs'][0]}", d] for p in people[:3]],
-                            note=extra)
-
-    # ---- tool 5: decisions behind an area -------------------------------------------------
+    # ---- decisions behind an area -------------------------------------------------
     def why(self, kep: int | str) -> Answer:
         """A decision record (KEP): who wrote, reviewed and approved it, which team owns it,
         how far it got, related decisions, and whether its approvers are still active."""
@@ -293,7 +262,7 @@ class Tools:
             "related": [{"kep": a, "title": b, "via": c} for a, b, c in related]},
             paths=[[f"KEP-{n}", f"owned by {k[6]}"]] + [[f"KEP-{n}", *r[2], f"KEP-{r[0]}"] for r in related[:3]])
 
-    # ---- tool 6: draft the fix (Act) ---------------------------------------------------------
+    # ---- draft the fix (Act) ---------------------------------------------------------
     def propose_owners_update(self, path: str, months: int = 12, min_prs: int = 10) -> Answer:
         """Draft an OWNERS change for one directory: silent approvers move to
         emeritus_approvers, active unlisted people with real review work are proposed as
@@ -337,7 +306,7 @@ class Tools:
                                   "remove": [a["handle"] for a in silent], "add_reviewers": [s["handle"] for s in add]},
                             paths=k.paths, note=k.note)
 
-    # ---- tool 7: reviewers for a change ----------------------------------------------------
+    # ---- reviewers for a change ----------------------------------------------------
     def suggest_reviewers(self, paths: str | list | None = None, pr: int | None = None, months: int = 6,
                           until: str | None = None, exclude: list | None = None, with_owners: bool = True) -> Answer:
         """Who should review a change touching these files (or a merged PR by number): people
@@ -417,14 +386,14 @@ class Tools:
                      "RETURN DISTINCT x.group_name", {"d": dirs[:15]})
         groups = sorted(r[0] for r in grp if r[0])
         if len(groups) > 1:
-            notes.append(f"This change crosses {len(groups)} working groups ({', '.join(groups)}), "
-                         "each with its own regular reviewers: make sure someone from each looks at it.")
+            notes.append(f"This change touches {len(groups)} working groups ({', '.join(groups)}); "
+                         "people who reviewed in more of these areas rank higher.")
         return self._answer("answered_with_path", "suggest_reviewers", args,
                             data={"since": since, "people": ranked, "areas": areas, "groups": groups},
                             paths=[[f"@{e['handle']}", f"reviewed PR #{e['example_prs'][0]}", e["areas"][0]] for e in ranked[:3] if e["example_prs"]],
                             note=" ".join(notes))
 
-    # ---- tool 8: every area with its health --------------------------------------------------
+    # ---- every area with its health --------------------------------------------------
     def areas(self, months: int = 12) -> Answer:
         """Every directory with an OWNERS file: listed approvers, how many are silent, and how
         much work merged there. Powers search and the cleanup queue."""
@@ -453,7 +422,7 @@ class Tools:
         return self._answer("answered_with_path", "areas", {"months": months},
                             data={"since": since, "as_of": self.as_of, "areas": items})
 
-    # ---- tool 9: the cleanup queue and a real patch ------------------------------------------
+    # ---- the cleanup queue and a real patch ------------------------------------------
     def cleanup_queue(self, limit: int = 25, months: int = 12, min_prs: int = 10) -> Answer:
         """Drafted OWNERS fixes for the most drifted directories, ready to review together."""
         limit = max(1, min(int(limit), 60))
@@ -488,7 +457,7 @@ class Tools:
         return self._answer("answered_with_path" if out["patch"] else "not_in_graph", "owners_patch", {"dirs": dirs},
                             data=out, note="" if out["patch"] else "None of these directories had a change that could be applied safely.")
 
-    # ---- tool 10: working group (FalkorDB label propagation, built by orggraph.groups) -------
+    # ---- working group (FalkorDB label propagation, built by orggraph.groups) -------
     def working_group(self, path: str) -> Answer:
         """The areas worked on by the same people as this one (a community found by
         algo.labelPropagation over WORKS_WITH links), their SIG labels, and who does the work."""
@@ -523,7 +492,7 @@ class Tools:
             "people": [{"handle": h, "prs": n, "areas": a} for h, n, a in people]},
             paths=[[d, f"same people as {y} (e.g. @{ps[0]})"] for y, n, ps in links[:3] if ps])
 
-    # ---- tool 11 / 12: what-if on a copy of the graph (orggraph.whatif) -------------------
+    # ---- what-if on a copy of the graph (orggraph.whatif) -------------------
     def what_if(self, handles) -> Answer:
         """If these people stopped approving, where would approval requests get stuck? Runs on a GRAPH.COPY."""
         from orggraph.whatif import step_back
@@ -544,8 +513,6 @@ CATALOGUE = {
                   "desc": "Listed approvers with recent activity (silent if none) and unlisted people doing the work (shadow owners)."},
     "drift_summary": {"fn": "drift_summary", "args": {"months": "int 1-24", "limit": "int 1-25"},
                       "desc": "Org-wide: how many approvers are silent and which directories have the most stale ownership."},
-    "route": {"fn": "route", "args": {"path": "directory path", "months": "int 1-24, default 6"},
-              "desc": "Who to send a new issue or PR in this area to, by recent review and approval work, with evidence."},
     "why": {"fn": "why", "args": {"kep": "KEP number, e.g. 2340"},
             "desc": "A decision record: authors, approvers, owning team, milestones, related decisions, approvers still active?"},
     "propose_owners_update": {"fn": "propose_owners_update",

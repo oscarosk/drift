@@ -11,7 +11,7 @@ from orggraph.agent import route_offline
     ("Who really works on pkg/kubelet/cm/cpumanager?", "who_knows"),
     ("Who owns pkg/kubelet?", "who_owns"),
     ("Who should review pkg/kubelet/kubelet.go and pkg/kubelet/cm/cpumanager/policy.go?", "suggest_reviewers"),
-    ("Who should I send a bug in pkg/scheduler to?", "route"),
+    ("Who should I send a bug in pkg/scheduler to?", "suggest_reviewers"),
     ("Draft a fix for pkg/kubelet/cm/cpumanager", "propose_owners_update"),
     ("Why was KEP 2340 decided?", "why"),
     ("How stale is ownership across Kubernetes?", "drift_summary"),
