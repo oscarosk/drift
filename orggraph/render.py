@@ -18,16 +18,24 @@ PATHLIKE = re.compile(r"\b((?:pkg|cmd|staging|test|plugin|hack|cluster|api|build
 KEPREF = re.compile(r"\bKEP[- ]?#?(\d{2,5})\b", re.I)
 
 
+HANDLE_LISTS = {"approvers", "remove", "add_reviewers", "silent_approvers", "people"}
+
+
 def known_names(answer) -> tuple[set, set, set]:
     """Every handle, path and KEP number that appears anywhere in the tool result."""
     blob = json.dumps(answer.to_dict(), default=str)
     handles = set(re.findall(r'"handle":\s*"([^"]+)"', blob))
     handles |= set(re.findall(r'"@([A-Za-z0-9-]+)', blob))
-    for key in ("approvers", "remove", "add_reviewers"):
-        for level in [answer.data] + list(answer.data.get("levels", [])):
-            v = level.get(key) if isinstance(level, dict) else None
-            if isinstance(v, list):
-                handles |= {x for x in v if isinstance(x, str)}
+    def walk(x):  # plain handle lists, wherever they sit in the result
+        if isinstance(x, dict):
+            for k, v in x.items():
+                if k in HANDLE_LISTS and isinstance(v, list):
+                    handles.update(h for h in v if isinstance(h, str))
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+    walk(answer.data)
     paths = set(re.findall(r'"(?:dir|path)":\s*"([^"]+)"', blob)) | set(re.findall(r'"([a-z_]+/[\w./-]+)"', blob))
     keps = set(re.findall(r'"kep":\s*(\d+)', blob)) | set(re.findall(r"KEP-(\d+)", blob))
     return {h.lower() for h in handles}, paths, keps
@@ -108,6 +116,15 @@ def template(answer) -> str:
                + f" (@{p[0]['handle']}: {p[0]['reviewed']} PRs reviewed, {p[0]['approvals']} approvals).")
         if silent:
             msg += f" Listed approvers with no activity in the last year: {', '.join('@' + h for h in silent[:4])}."
+        return msg
+    if t == "working_group":
+        others = [a["dir"] for a in d["areas"] if a["dir"] != d["dir"]]
+        msg = (f"{d['dir']} is worked on by the same people as {len(others)} other area(s)"
+               + (f", e.g. {', '.join(x['dir'] for x in d['links'][:3])}" if d["links"] else "") + ".")
+        if len(d["sigs"]) > 1:
+            msg += f" Together they carry {len(d['sigs'])} SIG labels ({', '.join(d['sigs'][:4])})."
+        if d["people"]:
+            msg += f" Most of the review work there: {_people(d['people'], n=3)}."
         return msg
     if t == "areas":
         a = d["areas"]

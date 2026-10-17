@@ -50,6 +50,13 @@ Numbers below are produced by `python -m orggraph.backtest` and stored in
 - **The records did not notice.** A year later, 44 of those 49 were still listed as approvers.
 - **The people doing the work show up early.** Ranking non-owners by review activity on
   2025-10-16, the top 30 became reviewers or approvers within a year at **5.3× the base rate**.
+- **The real teams don't follow the SIG labels.** Label propagation on who-works-where finds 22
+  working groups over 214 areas; 14 of them mix areas labelled with different SIGs. For example,
+  dynamic resource allocation joins `pkg/kubelet/cm/dra` (SIG Node) with the scheduler's
+  `dynamicresources` plugin and `pkg/apis/resource`. The groups match how approval really works: a
+  PR touching two areas in the same group needed a second approver **7%** of the time (3 of 44),
+  against **23%** (5 of 22) when it crossed groups. Small numbers, consistent across every setting we
+  tried; see [`results/groups.json`](results/groups.json).
 
 Scope note: activity covers merged PRs in kubernetes/kubernetes only. Someone "silent" here may be
 active in other Kubernetes repositories, or in work that leaves no PR trail. Drift reports what the
@@ -98,7 +105,7 @@ The data refreshes by re-running `fetch_reviews` and `build.py` (both incrementa
 
 ## How the agent works
 
-1. **A fixed tool catalogue.** The model chooses one of six tools and fills in arguments; it never
+1. **A fixed tool catalogue.** The model chooses one of eight tools and fills in arguments; it never
    sees or writes Cypher. Every tool is a hand-written, parameterised query.
 2. **Names are resolved first.** A directory, person or KEP is looked up before any traversal runs.
    Typos get suggestions (`pkg/kublet` → `pkg/kubelet`); a file path resolves to the directory whose
@@ -119,7 +126,8 @@ The data refreshes by re-running `fetch_reviews` and `build.py` (both incrementa
 | `route(path, months)` | Who to send new work to, by recent review and approval work, with example PRs |
 | `why(kep)` | A decision: authors, approvers, owning SIG, milestones, related KEPs, who is still active |
 | `propose_owners_update(path)` | A drafted OWNERS change with evidence for every line (never applied) |
-| `suggest_reviewers(paths or pr)` | Who should review a concrete change, across every area it touches |
+| `suggest_reviewers(paths or pr)` | Who should review a concrete change, across every area it touches; warns when it crosses working groups |
+| `working_group(path)` | Areas worked on by the same people (FalkorDB label propagation), their SIG labels and core people |
 | `owners_patch(dirs)` | A `git apply`-able patch for drafted fixes (MCP and the Cleanup queue) |
 
 ## Data sources
@@ -156,11 +164,13 @@ the predictions against today's graph.
 (:Dir)-[:INSIDE]->(:Dir)          # nearest ancestor with its own OWNERS file (ownership inheritance)
 (:Dir)-[:LABELED]->(:SIG)
 
-(:Person)-[:AUTHORED_PR]->(:PR {number, merged})
+(:Person)-[:AUTHORED_PR]->(:PR {number, merged, day})   # day = 20260910: integer, see the FalkorDB issue
 (:Person)-[:REVIEWED {state}]->(:PR)
 (:Person)-[:LGTM]->(:PR)          # Prow /lgtm
 (:Person)-[:APPROVED_PR]->(:PR)   # Prow /approve
 (:PR)-[:TOUCHES {files}]->(:Dir)  # the OWNERS directory responsible for the changed files
+(:Dir)-[:WORKS_WITH {shared, people}]->(:Dir)   # same people work in both (projection for the algorithm)
+(:Dir {group, group_name})                        # community from algo.labelPropagation
 
 (:KEP {number, title, status, stage, created, updated, latest_milestone, url})-[:OWNED_BY|INVOLVES]->(:SIG)
 (:Person)-[:AUTHORED|REVIEWED_KEP|APPROVED_KEP]->(:KEP)
@@ -208,17 +218,45 @@ RETURN p.handle AS person, prs, how ORDER BY prs DESC LIMIT 8
 ```cypher
 MATCH (p:Person)-[:APPROVER_OF]->(:Dir)
 WITH DISTINCT p
-OPTIONAL MATCH (p)-[:AUTHORED_PR|REVIEWED|LGTM|APPROVED_PR]->(pr:PR) WHERE pr.merged >= $since
+OPTIONAL MATCH (p)-[:AUTHORED_PR|REVIEWED|LGTM|APPROVED_PR]->(pr:PR) WHERE pr.day >= $since_day
 WITH p, count(DISTINCT pr) AS n
 RETURN count(p) AS approvers, sum(CASE WHEN n = 0 THEN 1 ELSE 0 END) AS silent
 ```
 
-More queries are added here as the agent tools are built.
+**Find a reviewer** (per area; ownership inheritance through `INSIDE`, a time window so the
+evaluation can ask "what would Drift have said before this PR?")
+
+```cypher
+MATCH (d:Dir {repo: 'kubernetes', path: $p})
+MATCH (p:Person)-[a:REVIEWED|LGTM|APPROVED_PR]->(pr:PR)-[:TOUCHES]->(:Dir)-[:INSIDE*0..10]->(d)
+  WHERE pr.day >= $since_day AND pr.day < $until_day AND NOT p.handle IN $exclude
+WITH p, a, pr ORDER BY pr.merged DESC
+WITH p, count(DISTINCT pr) AS reviewed,
+     sum(CASE WHEN type(a) = 'APPROVED_PR' THEN 1 ELSE 0 END) AS approvals,
+     max(pr.merged) AS last, collect(DISTINCT pr.number)[..2] AS examples
+RETURN p.handle, reviewed, approvals, last, examples
+ORDER BY approvals DESC, reviewed DESC, p.handle LIMIT 8
+```
+
+**Working groups** (`orggraph/groups.py`): build the who-works-where projection, then let FalkorDB find communities
+
+```cypher
+UNWIND $rows AS r
+MATCH (a:Dir {repo: 'kubernetes', path: r.a}), (b:Dir {repo: 'kubernetes', path: r.b})
+CREATE (a)-[:WORKS_WITH {shared: r.shared, people: r.people}]->(b);
+
+CALL algo.labelPropagation({nodeLabels: ['Dir'], relationshipTypes: ['WORKS_WITH']})
+YIELD node, communityId
+RETURN node.path, communityId
+```
+
+Every tool's queries are in [`orggraph/tools.py`](orggraph/tools.py), and every answer in the app and
+the API carries a trace of the queries it ran.
 
 ## A FalkorDB issue we hit
 
 **An index range scan on a string property ignores the upper bound.** We first saw it on graph module
-4.18.3 (falkordblite) and confirmed it on the current `falkordb/falkordb:latest` Docker image. With an
+4.18.3 (falkordblite) and confirmed it on the current `falkordb/falkordb:latest` Docker image (graph module 4.22.1). With an
 index on `PR.merged` (ISO date strings), `WHERE p.merged >= '2026-09-05' AND p.merged < '2026-09-10'`
 returned rows up to `2026-09-19`, and `p.merged < X` alone returned every row. Integer ranges are
 correct. Reproduce with `python scripts/repro_falkordb_range.py` (prints `5 / 15 / 5`; all three should be 5).

@@ -85,6 +85,13 @@ def suggest_reviewers(paths: str = "", pr: int | None = None, months: int = 6) -
 
 
 @server.tool(annotations=READ_ONLY)
+def working_group(path: str) -> dict:
+    """Areas worked on by the same people as this directory (a community found with FalkorDB's label
+    propagation), the SIG labels they carry, and the people doing most of the review work."""
+    return _out(tools().working_group(path))
+
+
+@server.tool(annotations=READ_ONLY)
 def owners_patch(dirs: list[str]) -> dict:
     """A git-apply-able patch of drafted OWNERS changes for these directories, with evidence in its header.
     Returned as text for a human to review; nothing is applied."""

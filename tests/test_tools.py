@@ -51,3 +51,12 @@ def test_proposal_has_evidence_for_every_line(t):
 def test_cypher_never_contains_user_text(t):
     t.who_owns("pkg/kubelet') RETURN 1 //")  # resolved as a parameter, never concatenated
     assert t.who_owns("pkg/kubelet").outcome == "answered_with_path"
+
+
+def test_working_group_contains_the_area(t):
+    a = t.working_group("pkg/kubelet/cm/dra")
+    if a.outcome == "not_in_graph":
+        pytest.skip("groups not built: python -m orggraph.groups")
+    assert a.outcome == "answered_with_path"
+    assert "pkg/kubelet/cm/dra" in [x["dir"] for x in a.data["areas"]]
+    assert all(set(l["people"]) for l in a.data["links"])
