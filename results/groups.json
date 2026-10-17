@@ -1,0 +1,613 @@
+{
+ "as_of": "2026-10-16",
+ "window": "2025-10-16..2026-10-16",
+ "settings": {
+  "hub": 40,
+  "links_per_dir": 4,
+  "min_prs": 2
+ },
+ "groups": [
+  {
+   "id": 408,
+   "name": "pkg/features",
+   "dirs": [
+    "test/compatibility_lifecycle/reference",
+    "pkg/features",
+    "pkg/generated/openapi",
+    "staging/src/k8s.io/api",
+    "api",
+    "staging/src/k8s.io/client-go/applyconfigurations",
+    "test",
+    "staging/src/k8s.io/apimachinery/pkg/api/resource",
+    "pkg/controller/podautoscaler",
+    "pkg/apis/autoscaling",
+    "cmd/kube-scheduler",
+    "staging/src/k8s.io/api/autoscaling",
+    "pkg/registry/batch",
+    "test/e2e/autoscaling",
+    "pkg/scheduler/framework/plugins/volumebinding",
+    "staging/src/k8s.io/cloud-provider/controllers/route",
+    "test/e2e/framework/autoscaling",
+    "test/integration/podautoscaler",
+    "staging/src/k8s.io/controller-manager/pkg/features"
+   ],
+   "prs": 1482,
+   "sigs": [
+    "Autoscaling",
+    "Scheduling",
+    "Apps",
+    "Testing",
+    "Storage"
+   ],
+   "people": [
+    "liggitt",
+    "pohly",
+    "jpbetz",
+    "soltysh",
+    "sergeykanzhelev"
+   ]
+  },
+  {
+   "id": 363,
+   "name": "staging/src/k8s.io/code-generator",
+   "dirs": [
+    "hack",
+    "test/e2e_node",
+    "staging/src/k8s.io/code-generator",
+    "test/e2e/storage",
+    "test/e2e/common/node",
+    "pkg/apis/core/validation",
+    "pkg/apis/core",
+    "cmd/kubelet/app",
+    "pkg/proxy",
+    "pkg/api/pod",
+    "pkg/controller/volume",
+    "pkg/apis",
+    "pkg/volume",
+    "test/e2e/node",
+    "test/e2e/network",
+    "pkg/apis/storage",
+    "staging/src/k8s.io/cri-streaming",
+    "staging/src/k8s.io/apiserver/pkg/cel",
+    "staging/src/k8s.io/mount-utils",
+    "pkg/kubelet/volumemanager",
+    "pkg/apis/networking",
+    "staging/src/k8s.io/api/storage",
+    "test/e2e/testing-manifests/storage-csi",
+    "pkg/registry/storage",
+    "staging/src/k8s.io/api/networking",
+    "staging/src/k8s.io/api/rbac",
+    "pkg/volume/iscsi",
+    "pkg/volume/emptydir",
+    "test/e2e/common/storage",
+    "pkg/api/persistentvolumeclaim"
+   ],
+   "prs": 1477,
+   "sigs": [
+    "Storage",
+    "Node",
+    "Network",
+    "Auth",
+    "Apps",
+    "API Machinery"
+   ],
+   "people": [
+    "liggitt",
+    "sergeykanzhelev",
+    "jpbetz",
+    "dims",
+    "pohly"
+   ]
+  },
+  {
+   "id": 407,
+   "name": "pkg/scheduler",
+   "dirs": [
+    "pkg/scheduler",
+    ".",
+    "staging/src/k8s.io/kube-scheduler",
+    "test/integration/scheduler",
+    "pkg/scheduler/framework/plugins/dynamicresources",
+    "test/e2e/dra",
+    "test/integration/scheduler_perf",
+    "test/integration/dra",
+    "hack/tools/instrumentation",
+    "pkg/controller/resourceclaim",
+    "test/e2e/apimachinery",
+    "pkg/controller/devicetainteviction",
+    "pkg/controller/statefulset",
+    "hack/tools/instrumentation/testdata",
+    "pkg/proxy/winkernel",
+    "staging/src/k8s.io/apiserver/pkg/storage/etcd3/metrics",
+    "pkg/scheduler/framework/plugins/nodevolumelimits",
+    "staging/src/k8s.io/dynamic-resource-allocation/structured/schedulerapi",
+    "test/integration/apimachinery",
+    "staging/src/k8s.io/kube-scheduler/config"
+   ],
+   "prs": 1309,
+   "sigs": [
+    "Scheduling",
+    "Node",
+    "Instrumentation",
+    "API Machinery",
+    "Windows",
+    "Network",
+    "etcd",
+    "Storage",
+    "Apps"
+   ],
+   "people": [
+    "macsko",
+    "pohly",
+    "liggitt",
+    "dims",
+    "dom4ha"
+   ]
+  },
+  {
+   "id": 369,
+   "name": "staging/src/k8s.io/kubectl",
+   "dirs": [
+    "staging/src/k8s.io/kubectl",
+    "staging/src/k8s.io/apiserver",
+    "vendor",
+    "cmd/kubeadm",
+    "staging/src/k8s.io/kube-controller-manager",
+    "staging/src/k8s.io/cli-runtime",
+    "staging/src/k8s.io/metrics",
+    "staging/src/k8s.io/component-helpers",
+    "staging/src/k8s.io/sample-cli-plugin",
+    "staging/src/k8s.io/apimachinery",
+    "staging/src/k8s.io/cluster-bootstrap",
+    "staging/src/k8s.io/csi-translation-lib",
+    "staging/src/k8s.io/kms",
+    "cluster/gce",
+    "cluster/gce/manifests",
+    "cluster/addons/dns",
+    "test/e2e/testing-manifests/statefulset/etcd"
+   ],
+   "prs": 1266,
+   "sigs": [
+    "CLI",
+    "API Machinery",
+    "Cluster Lifecycle",
+    "Storage",
+    "Instrumentation",
+    "Auth",
+    "etcd"
+   ],
+   "people": [
+    "liggitt",
+    "soltysh",
+    "dims",
+    "neolit123",
+    "hirazawaui"
+   ]
+  },
+  {
+   "id": 483,
+   "name": "staging/src/k8s.io/cloud-provider",
+   "dirs": [
+    "staging/src/k8s.io/cloud-provider",
+    "staging/src/k8s.io/controller-manager",
+    "staging/src/k8s.io/endpointslice",
+    "staging/src/k8s.io/kubelet",
+    "staging/src/k8s.io/cri-client",
+    "staging/src/k8s.io/component-base",
+    "staging/src/k8s.io/kube-proxy",
+    "test/conformance/testdata",
+    "staging/src/k8s.io/kubelet/config",
+    "pkg/kubelet/pluginmanager",
+    "pkg/kubelet/stats",
+    "cmd"
+   ],
+   "prs": 702,
+   "sigs": [
+    "Cloud Provider",
+    "Architecture",
+    "Network",
+    "API Machinery",
+    "Node"
+   ],
+   "people": [
+    "liggitt",
+    "dims",
+    "sergeykanzhelev",
+    "skitt",
+    "haircommander"
+   ]
+  },
+  {
+   "id": 458,
+   "name": "staging/src/k8s.io/dynamic-resource-allocation",
+   "dirs": [
+    "staging/src/k8s.io/dynamic-resource-allocation",
+    "pkg/apis/resource",
+    "pkg/kubelet/cm",
+    "staging/src/k8s.io/api/resource",
+    "pkg/registry/resource",
+    "pkg/kubelet/cm/dra",
+    "test/integration/scheduler_perf/dra",
+    "pkg/kubelet/cm/devicemanager",
+    "staging/src/k8s.io/dynamic-resource-allocation/api"
+   ],
+   "prs": 591,
+   "sigs": [
+    "Node"
+   ],
+   "people": [
+    "pohly",
+    "liggitt",
+    "sergeykanzhelev",
+    "dims",
+    "bart0sh"
+   ]
+  },
+  {
+   "id": 713,
+   "name": "staging/src/k8s.io/client-go",
+   "dirs": [
+    "staging/src/k8s.io/client-go",
+    "test/declarative_validation",
+    "hack/kube-api-linter",
+    "cmd/kube-controller-manager",
+    "pkg/api/testing",
+    "plugin/pkg/auth/authorizer",
+    "test/integration/etcd",
+    "cmd/kube-apiserver",
+    "pkg/printers",
+    "pkg/kubeapiserver",
+    "staging/src/k8s.io/api/apps",
+    "pkg/scheduler/framework/autoscaler_contract",
+    "pkg/controller/resourcequota"
+   ],
+   "prs": 554,
+   "sigs": [
+    "API Machinery",
+    "Auth",
+    "Apps",
+    "etcd"
+   ],
+   "people": [
+    "liggitt",
+    "jpbetz",
+    "pohly",
+    "joelspeed",
+    "yongruilin"
+   ]
+  },
+  {
+   "id": 368,
+   "name": "staging/src/k8s.io/apiextensions-apiserver",
+   "dirs": [
+    "staging/src/k8s.io/apiextensions-apiserver",
+    "staging/src/k8s.io/kube-aggregator",
+    "staging/src/k8s.io/sample-apiserver",
+    "staging/src/k8s.io/client-go/tools/cache",
+    "plugin/pkg/auth/authorizer/node",
+    "staging/src/k8s.io/client-go/tools/events",
+    "test/integration/apiserver/tracing"
+   ],
+   "prs": 513,
+   "sigs": [
+    "API Machinery",
+    "Auth"
+   ],
+   "people": [
+    "liggitt",
+    "dims",
+    "jpbetz",
+    "pohly",
+    "michaelasp"
+   ]
+  },
+  {
+   "id": 475,
+   "name": "pkg/kubelet",
+   "dirs": [
+    "pkg/kubelet",
+    "pkg/kubelet/cm/cpumanager",
+    "test/images/agnhost",
+    "pkg/kubelet/cm/topologymanager",
+    "pkg/kubelet/apis/podresources",
+    "test/e2e/windows",
+    "test/e2e_node_windows"
+   ],
+   "prs": 402,
+   "sigs": [
+    "Windows",
+    "Node"
+   ],
+   "people": [
+    "sergeykanzhelev",
+    "liggitt",
+    "tallclair",
+    "dims",
+    "ffromani"
+   ]
+  },
+  {
+   "id": 985,
+   "name": "staging/src/k8s.io/apiserver/pkg/storage",
+   "dirs": [
+    "staging/src/k8s.io/apiserver/pkg/storage",
+    "staging/src/k8s.io/apimachinery/pkg",
+    "staging/src/k8s.io/apiserver/pkg/storage/testing",
+    "staging/src/k8s.io/apiserver/pkg/storage/etcd3",
+    "test/integration/apiserver/storage",
+    "test/integration/controlplane",
+    "staging/src/k8s.io/apiserver/pkg/registry/generic"
+   ],
+   "prs": 353,
+   "sigs": [
+    "API Machinery",
+    "etcd"
+   ],
+   "people": [
+    "serathius",
+    "jpbetz",
+    "mborsz",
+    "liggitt",
+    "jefftree"
+   ]
+  },
+  {
+   "id": 757,
+   "name": "pkg/apis/scheduling",
+   "dirs": [
+    "pkg/apis/scheduling",
+    "staging/src/k8s.io/api/scheduling",
+    "pkg/controller/job",
+    "plugin/pkg/admission",
+    "pkg/apis/batch",
+    "pkg/registry/scheduling",
+    "pkg/controller",
+    "test/integration/job",
+    "test/e2e/apps",
+    "pkg/controlplane/apiserver/samples/generic",
+    "staging/src/k8s.io/api/batch",
+    "pkg/kubeapiserver/options",
+    "test/e2e/scheduling",
+    "pkg/api",
+    "staging/src/k8s.io/component-helpers/scheduling/schedulingv1/workloadbuilder"
+   ],
+   "prs": 331,
+   "sigs": [
+    "Apps",
+    "Scheduling",
+    "API Machinery"
+   ],
+   "people": [
+    "liggitt",
+    "jpbetz",
+    "pohly",
+    "soltysh",
+    "yongruilin"
+   ]
+  },
+  {
+   "id": 709,
+   "name": "pkg/controlplane",
+   "dirs": [
+    "test/integration/apiserver",
+    "pkg/controlplane",
+    "staging/src/k8s.io/apiserver/pkg/features",
+    "staging/src/k8s.io/apimachinery/pkg/apis/meta/v1",
+    "test/integration/auth",
+    "pkg/registry/admissionregistration",
+    "pkg/kubeapiserver/authorizer",
+    "test/integration/client",
+    "staging/src/k8s.io/apiserver/pkg/authorization",
+    "staging/src/k8s.io/apiserver/pkg/endpoints/filters/impersonation",
+    "pkg/registry/authorization",
+    "staging/src/k8s.io/apiserver/plugin/pkg/authorizer",
+    "pkg/auth"
+   ],
+   "prs": 283,
+   "sigs": [
+    "Auth",
+    "API Machinery"
+   ],
+   "people": [
+    "liggitt",
+    "jpbetz",
+    "jefftree",
+    "pohly",
+    "lalitc375"
+   ]
+  },
+  {
+   "id": 439,
+   "name": "staging/publishing",
+   "dirs": [
+    "build",
+    "test/e2e/framework",
+    "test/utils/image",
+    "test/images",
+    "staging/publishing",
+    "cluster/gce/gci",
+    "build/build-image",
+    "cluster/gce/windows"
+   ],
+   "prs": 244,
+   "sigs": [
+    "Release"
+   ],
+   "people": [
+    "dims",
+    "bentheelder",
+    "pohly",
+    "aojea",
+    "sergeykanzhelev"
+   ]
+  },
+  {
+   "id": 793,
+   "name": "staging/src/k8s.io/pod-security-admission",
+   "dirs": [
+    "staging/src/k8s.io/pod-security-admission",
+    "staging/src/k8s.io/sample-controller",
+    "staging/src/k8s.io/apiserver/pkg/server/options",
+    "staging/src/k8s.io/apiserver/pkg/storage/storagebackend"
+   ],
+   "prs": 230,
+   "sigs": [
+    "API Machinery",
+    "Auth"
+   ],
+   "people": [
+    "liggitt",
+    "dims",
+    "skitt",
+    "jpbetz",
+    "soltysh"
+   ]
+  },
+  {
+   "id": 899,
+   "name": "pkg/kubelet/allocation",
+   "dirs": [
+    "pkg/kubelet/allocation",
+    "pkg/registry/core/pod",
+    "pkg/scheduler/apis/config",
+    "pkg/kubelet/status",
+    "test/integration/pods",
+    "test/e2e/common/node/framework/podresize",
+    "staging/src/k8s.io/component-helpers/nodedeclaredfeatures",
+    "plugin/pkg/admission/nodedeclaredfeatures",
+    "staging/src/k8s.io/component-helpers/resource",
+    "pkg/api/v1"
+   ],
+   "prs": 147,
+   "sigs": [
+    "Node",
+    "Scheduling"
+   ],
+   "people": [
+    "liggitt",
+    "sergeykanzhelev",
+    "tallclair",
+    "natasha41575",
+    "macsko"
+   ]
+  },
+  {
+   "id": 773,
+   "name": "pkg/apis/core/v1",
+   "dirs": [
+    "pkg/apis/core/v1",
+    "test/e2e/feature",
+    "pkg/kubelet/metrics",
+    "staging/src/k8s.io/component-helpers/nodedeclaredfeatures/features"
+   ],
+   "prs": 115,
+   "sigs": [
+    "Autoscaling"
+   ],
+   "people": [
+    "liggitt",
+    "sergeykanzhelev",
+    "jpbetz",
+    "tallclair",
+    "thockin"
+   ]
+  },
+  {
+   "id": 486,
+   "name": "staging/src/k8s.io/cri-api",
+   "dirs": [
+    "staging/src/k8s.io/cri-api",
+    "pkg/kubelet/server",
+    "pkg/kubelet/apis/config"
+   ],
+   "prs": 112,
+   "sigs": [
+    "Node"
+   ],
+   "people": [
+    "liggitt",
+    "sergeykanzhelev",
+    "dims",
+    "haircommander",
+    "skitt"
+   ]
+  },
+  {
+   "id": 702,
+   "name": "pkg/apis/certificates",
+   "dirs": [
+    "pkg/apis/certificates",
+    "staging/src/k8s.io/api/certificates",
+    "pkg/registry/certificates",
+    "test/e2e/auth",
+    "pkg/controller/certificates",
+    "test/integration/podcertificaterequests"
+   ],
+   "prs": 94,
+   "sigs": [
+    "Auth"
+   ],
+   "people": [
+    "liggitt",
+    "jpbetz",
+    "pohly",
+    "thockin",
+    "lalitc375"
+   ]
+  },
+  {
+   "id": 545,
+   "name": "staging/src/k8s.io/apiserver/pkg/endpoints",
+   "dirs": [
+    "staging/src/k8s.io/apiserver/pkg/endpoints",
+    "staging/src/k8s.io/component-base/metrics"
+   ],
+   "prs": 61,
+   "sigs": [
+    "Instrumentation"
+   ],
+   "people": [
+    "liggitt",
+    "richabanker",
+    "jpbetz",
+    "serathius",
+    "wojtek-t"
+   ]
+  }
+ ],
+ "dirs_grouped": 206,
+ "cross_sig_groups": 13,
+ "check": {
+  "groups_built_from": "activity before 2026-07-16",
+  "prs_from": "2026-07-16",
+  "multi_area_prs_by_groups_crossed": {
+   "1": {
+    "prs": 52,
+    "needed_2plus_approvers": 6,
+    "rate": 0.115
+   },
+   "2": {
+    "prs": 67,
+    "needed_2plus_approvers": 11,
+    "rate": 0.164
+   },
+   "3+": {
+    "prs": 47,
+    "needed_2plus_approvers": 16,
+    "rate": 0.34
+   }
+  },
+  "two_area_prs": {
+   "same_group": {
+    "prs": 39,
+    "needed_2plus_approvers": 5,
+    "rate": 0.128
+   },
+   "different_groups": {
+    "prs": 27,
+    "needed_2plus_approvers": 3,
+    "rate": 0.111
+   }
+  }
+ }
+}
