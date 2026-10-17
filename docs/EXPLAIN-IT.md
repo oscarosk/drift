@@ -9,7 +9,8 @@ questions a judge is most likely to ask, each with a short answer.
 Big projects write down who owns what (Kubernetes uses `OWNERS` files). People move on, others quietly
 take over, and the files stop matching reality. Drift loads both into one FalkorDB graph: **what the
 records say** (who is listed in `OWNERS`) and **what people actually do** (who wrote, reviewed, `/lgtm`'d
-and `/approve`'d merged pull requests). Every question becomes a walk through that graph. Drift uses it to
+and `/approve`'d merged pull requests). Every question becomes a walk through that graph. Today 48 of
+Kubernetes' 157 approvers have done nothing in kubernetes/kubernetes for a year and are still listed. Drift uses the graph to
 pick the right reviewer for a change, to draft fixes to the records, to check those fixes on a copy of the
 graph, and to show the path behind every answer.
 

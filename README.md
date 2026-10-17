@@ -4,6 +4,9 @@
 
 **Your ownership records are already out of date. Drift shows where, proves it, and drafts the fix.**
 
+Today, **48 of Kubernetes' 157 approvers** have had no reviews, `/lgtm`, `/approve` or merged PRs in
+kubernetes/kubernetes for a year. The OWNERS files still list them.
+
 On 400 recent Kubernetes PRs, Drift's top 3 suggested reviewers included the person who actually
 approved the change **78%** of the time. Picking from the OWNERS files: **37%**.
 
@@ -61,7 +64,8 @@ keeps it that way.
 Numbers below are produced by `python -m orggraph.backtest` and stored in
 [`results/backtest.json`](results/backtest.json).
 
-- **A third of approvers were silent for a year.** On 2025-10-16, 49 of 152 Kubernetes approvers had
+- **A third of approvers were silent for a year, then and now.** Today it's 48 of 157 (the live site's
+  headline). A year earlier, on 2025-10-16, 49 of 152 Kubernetes approvers had
   no reviews, `/lgtm`, `/approve` or merged PRs in kubernetes/kubernetes in the previous 12 months.
 - **The records did not notice.** A year later, 44 of those 49 were still listed as approvers.
 - **The people doing the work show up early.** Ranking non-owners by review activity on
@@ -180,6 +184,9 @@ The data refreshes by re-running `fetch_reviews` and `build.py` (both incrementa
 | `kubernetes/enhancements/keps/**/kep.yaml` | Decisions: authors, reviewers, approvers, owning team, status, milestones, feature gates |
 | git history of `kubernetes/kubernetes` | Every merged PR since Oct 2024 and the files it changed |
 | GitHub GraphQL API | Who reviewed each merged PR, and who typed Prow `/lgtm` and `/approve` |
+
+All three Kubernetes repositories are Apache-2.0 licensed; Drift reads them and doesn't redistribute them
+(`data/` is not committed).
 
 **Privacy:** only public GitHub handles are stored. Names, emails and employers present in
 `sigs.yaml` are deliberately not loaded, and no comment text is stored.
@@ -338,7 +345,7 @@ stores `day` as an integer (`20260910`), and all date filters use it.
 - OWNERS `no_parent_owners` (which stops inheritance) is applied in `who_owns`, not yet in the activity queries.
 - Memory lives in the same graph, so rebuilding the graph clears it.
 - The what-if counts an approver as active if they did any review, `/lgtm`, `/approve` or merged PR in kubernetes/kubernetes in the last year; it does not model alias membership changes.
-- 50 tests (`pytest`); the ones that need the built graph skip in CI, where only the OWNERS data is loaded.
+- 52 tests (`pytest`); the ones that need the built graph skip in CI, where only the OWNERS data is loaded.
 
 ## Explaining the project
 
