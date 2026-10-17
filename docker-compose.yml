@@ -1,6 +1,7 @@
 services:
   falkordb:
     image: falkordb/falkordb:latest
+    restart: unless-stopped   # comes back after a reboot or Docker restart
     ports:
       - "6379:6379"   # database
       - "3000:3000"   # FalkorDB Browser: open http://localhost:3000 to explore the graph

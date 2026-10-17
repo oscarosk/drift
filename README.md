@@ -1,9 +1,11 @@
 # Drift
 
+[![ci](https://github.com/oscarosk/drift/actions/workflows/ci.yml/badge.svg)](https://github.com/oscarosk/drift/actions/workflows/ci.yml)
+
 **Your ownership records are already out of date. Drift shows where, proves it, and drafts the fix.**
 
 On 400 recent Kubernetes PRs, Drift's top 3 suggested reviewers included the person who actually
-approved the change **78%** of the time. Picking from the OWNERS files: **38%**.
+approved the change **78%** of the time. Picking from the OWNERS files: **37%**.
 
 Every large engineering organisation writes down who owns what: CODEOWNERS, OWNERS files, team
 pages. Then people move on, new people quietly take over, and the records stop matching reality.
@@ -25,13 +27,14 @@ reviewers using **only activity from before that PR**, and we checked against wh
 
 | Method | Right person first | Right person in top 3 |
 |---|---|---|
-| **Drift** (Find a reviewer) | **53%** | **78%** (95% CI 73–82%) |
-| Pick from the OWNERS files (what the records say) | 13% | 38% |
+| **Drift** (Find a reviewer) | **52%** | **78%** (95% CI 74–82%) |
+| Pick from the OWNERS files (what the records say) | 13% | 37% |
 | Ask the busiest approvers | n/a | 46% |
 
 OWNERS files don't rank people, so their figures are the exact chance that a pick from the nearest
 OWNERS files includes the right approver (today's files, which slightly favours them). Re-run with
 `python -m orggraph.eval_reviewers`; results in [`results/reviewer_eval.json`](results/reviewer_eval.json).
+If you fetch the data on a different day, expect the figures to move by a point or two.
 
 An earlier run said 86%. That number was wrong: a FalkorDB index bug (below) let activity from after
 each PR leak into the prediction. The figure above is after the fix, and `tests/test_eval_no_leak.py`
@@ -214,10 +217,12 @@ More queries are added here as the agent tools are built.
 
 ## A FalkorDB issue we hit
 
-**An index range scan on a string property ignores the upper bound** (graph module 4.18.3). With an
+**An index range scan on a string property ignores the upper bound.** We first saw it on graph module
+4.18.3 (falkordblite) and confirmed it on the current `falkordb/falkordb:latest` Docker image. With an
 index on `PR.merged` (ISO date strings), `WHERE p.merged >= '2026-09-05' AND p.merged < '2026-09-10'`
 returned rows up to `2026-09-19`, and `p.merged < X` alone returned every row. Integer ranges are
-correct. Reproduce with `python scripts/repro_falkordb_range.py`. Workaround in Drift: every PR also
+correct. Reproduce with `python scripts/repro_falkordb_range.py` (prints `5 / 15 / 5`; all three should be 5).
+CI runs it on every push against the latest FalkorDB image, so we'll see when it's fixed. Workaround in Drift: every PR also
 stores `day` as an integer (`20260910`), and all date filters use it.
 
 ## Honest limits
