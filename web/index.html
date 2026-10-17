@@ -581,7 +581,7 @@ async function findReviewers() {
     d.areas.forEach((a) => a.silent_approvers.forEach((h) => (quiet[h] = quiet[h] || []).push(a.dir)));
     const quietList = Object.entries(quiet);
     const crossN = (d.groups || []).length;
-    const crossNote = crossN > 1 ? `These files belong to ${crossN} different working groups, and each group has its own regular reviewers. Make sure someone from each one looks at the change.` : "";
+    const crossNote = crossN > 1 ? `These files belong to ${crossN} different working groups (sets of areas reviewed by the same people). Drift ranks people higher when they've reviewed in more of your areas.` : "";
     const otherNote = (r.note || "").split(/(?<=\.)\s/).filter((x) => x && !x.includes("working groups")).join(" ");
     const ex = top.example_prs[0], area = top.areas[top.areas.length - 1];
     const steps = [[gh(top.handle), `reviewed or approved ${top.reviewed} merged PRs in these areas, for example`, "work"]];

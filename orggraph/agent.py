@@ -65,9 +65,7 @@ def route_offline(question: str):
         return "propose_owners_update", {"path": path}
     if path and re.search(r"\b(review|send|route|assign|who should)\b", q):
         paths = [m.rstrip(".,?;:)") for m in PATH_RE.findall(question)]
-        if len(paths) > 1 or "." in paths[0].split("/")[-1]:  # several paths or a file: a concrete change
-            return "suggest_reviewers", {"paths": " ".join(paths)}
-        return "route", {"path": path}
+        return "suggest_reviewers", {"paths": " ".join(paths)}
     handles = re.findall(r"@([A-Za-z0-9][A-Za-z0-9-]*)", question)
     if handles and re.search(r"\b(what if|steps? back|stepped back|leaves?|left|quits?|departs?|gone|retire)", q):
         return "what_if", {"handles": " ".join("@" + h for h in handles)}
@@ -142,7 +140,7 @@ class Agent:
         if not name or name not in CATALOGUE:
             return {"question": question, "outcome": "unknown_entity", "text":
                     "I can answer who owns or really works on a directory (e.g. pkg/kubelet), where ownership is stale, "
-                    "who to route work to, why a KEP was decided, or draft an OWNERS fix.", "picked_by": picker}
+                    "who should review a change, why a KEP was decided, or draft an OWNERS fix.", "picked_by": picker}
         fn = getattr(self.tools, CATALOGUE[name]["fn"])
         args = {k: v for k, v in args.items() if k in CATALOGUE[name]["args"]}
         answer = fn(**args)

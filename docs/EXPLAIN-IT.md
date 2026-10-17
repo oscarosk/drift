@@ -204,7 +204,7 @@ parts no single record holds.
 traversal runs. A real directory with no recent activity returns `not_in_graph`, which is a different
 statement from "nobody owns it".
 
-**Does the model write queries?** No. It picks one of nine tools and fills in arguments. Names are resolved
+**Does the model write queries?** No. It picks one of eight tools and fills in arguments. Names are resolved
 against the graph first, and its sentence is checked against the result.
 
 **How do you stop it inventing people?** `render.check`: any @handle, directory, KEP number or number in the

@@ -137,7 +137,7 @@ The data refreshes by re-running `fetch_reviews` and `build.py` (both incrementa
 
 ## How the agent works
 
-1. **A fixed tool catalogue.** The model chooses one of nine tools and fills in arguments; it never
+1. **A fixed tool catalogue.** The model chooses one of eight tools and fills in arguments; it never
    sees or writes Cypher. Every tool is a hand-written, parameterised query.
 2. **Names are resolved first.** A directory, person or KEP is looked up before any traversal runs.
    Typos get suggestions (`pkg/kublet` → `pkg/kubelet`); a file path resolves to the directory whose
@@ -162,7 +162,6 @@ The data refreshes by re-running `fetch_reviews` and `build.py` (both incrementa
 | `who_owns(path)` | The OWNERS chain from a directory up to the root, approvers and teams at each level |
 | `who_knows(path, months)` | Listed approvers with recent activity (silent if none), and shadow owners |
 | `drift_summary(months)` | Share of silent approvers org-wide, and the most drifted directories |
-| `route(path, months)` | Who to send new work to, by recent review and approval work, with example PRs |
 | `why(kep)` | A decision: authors, approvers, owning SIG, milestones, related KEPs, who is still active |
 | `propose_owners_update(path)` | A drafted OWNERS change with evidence for every line (never applied) |
 | `suggest_reviewers(paths or pr)` | Who should review a concrete change, across every area it touches; flags when it crosses working groups |
