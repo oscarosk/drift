@@ -50,13 +50,14 @@ Numbers below are produced by `python -m orggraph.backtest` and stored in
 - **The records did not notice.** A year later, 44 of those 49 were still listed as approvers.
 - **The people doing the work show up early.** Ranking non-owners by review activity on
   2025-10-16, the top 30 became reviewers or approvers within a year at **5.3× the base rate**.
-- **The real teams don't follow the SIG labels.** Label propagation on who-works-where finds 22
-  working groups over 214 areas; 14 of them mix areas labelled with different SIGs. For example,
-  dynamic resource allocation joins `pkg/kubelet/cm/dra` (SIG Node) with the scheduler's
-  `dynamicresources` plugin and `pkg/apis/resource`. The groups match how approval really works: a
-  PR touching two areas in the same group needed a second approver **7%** of the time (3 of 44),
-  against **23%** (5 of 22) when it crossed groups. Small numbers, consistent across every setting we
-  tried; see [`results/groups.json`](results/groups.json).
+- **The real teams don't follow the SIG labels.** Label propagation on who-works-where finds about
+  20 working groups over ~200 areas; most of them mix areas labelled with different SIGs. For example,
+  dynamic resource allocation joins `pkg/kubelet/cm/dra` (SIG Node) with `pkg/apis/resource` and its
+  e2e tests. The groups predict the future: built from activity before 2026-07-16, they put **half**
+  of the area pairs changed together in later PRs in the same group, against **10%** by chance (the
+  highest of 200 shuffles: 15%). See [`results/groups.json`](results/groups.json).
+  We also tested whether crossing groups means a PR needs more approvers. One download of the data
+  said 3×, another said no difference, so we don't claim it.
 
 Scope note: activity covers merged PRs in kubernetes/kubernetes only. Someone "silent" here may be
 active in other Kubernetes repositories, or in work that leaves no PR trail. Drift reports what the
@@ -126,7 +127,7 @@ The data refreshes by re-running `fetch_reviews` and `build.py` (both incrementa
 | `route(path, months)` | Who to send new work to, by recent review and approval work, with example PRs |
 | `why(kep)` | A decision: authors, approvers, owning SIG, milestones, related KEPs, who is still active |
 | `propose_owners_update(path)` | A drafted OWNERS change with evidence for every line (never applied) |
-| `suggest_reviewers(paths or pr)` | Who should review a concrete change, across every area it touches; warns when it crosses working groups |
+| `suggest_reviewers(paths or pr)` | Who should review a concrete change, across every area it touches; flags when it crosses working groups |
 | `working_group(path)` | Areas worked on by the same people (FalkorDB label propagation), their SIG labels and core people |
 | `owners_patch(dirs)` | A `git apply`-able patch for drafted fixes (MCP and the Cleanup queue) |
 
