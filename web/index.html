@@ -191,6 +191,17 @@ details.how td { padding: 2px 16px 2px 0; font: 12.5px var(--mono); }
 .gm-label { font: 500 12px var(--mono); fill: var(--ink); }
 .gm-count { font: 600 11px var(--sans); fill: var(--muted); }
 
+.tabs2 { display: flex; gap: 4px; margin-top: 40px; border-bottom: 1px solid var(--rule); overflow-x: auto; scrollbar-width: none; }
+.tabs2 button { background: transparent; color: var(--muted); border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 10px 14px 11px; font: 600 16px var(--head); font-stretch: 85%; white-space: nowrap; }
+.tabs2 button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+.tabs2 button:first-child { padding-left: 0; }
+.tabpanel { padding-top: 18px; }
+.tabpanel > p.sub { margin: 0 0 14px; color: var(--muted); font-size: 15px; max-width: 70ch; }
+.more { margin-top: 6px; }
+.chainlist { list-style: none; margin: 0; padding: 0; }
+.chainlist li { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 4px 18px; padding: 9px 0; border-top: 1px solid var(--rule); font-size: 14.5px; }
+.chainlist code { word-break: break-all; }
+
 /* ---- fix the records ---- */
 .queue-bar { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 22px;
   padding: 12px 14px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; position: sticky; top: 98px; z-index: 5; }
@@ -213,6 +224,15 @@ details.how td { padding: 2px 16px 2px 0; font: 12.5px var(--mono); }
 .results p { margin: 10px 0 0; font-size: 15px; }
 .results h3 { font-size: 17px; font-weight: 700; margin-top: 14px; }
 table.t caption { text-align: left; color: var(--muted); font-size: 14px; padding-bottom: 8px; }
+.results details { margin-top: 12px; font-size: 14px; }
+.results details summary { cursor: pointer; color: var(--muted); }
+.results details table { margin-top: 8px; }
+.fine { max-width: 72ch; margin-top: 36px; }
+.fine > h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+.fine details { border-top: 1px solid var(--rule); padding: 10px 0; }
+.fine details:last-child { border-bottom: 1px solid var(--rule); }
+.fine summary { cursor: pointer; font-weight: 600; }
+.fine details p { color: var(--muted); margin: 8px 0 2px; }
 .method { max-width: 72ch; }
 .method h3 { font-size: 18px; font-weight: 700; margin-top: 26px; }
 .method p, .method li { color: var(--muted); }
@@ -234,6 +254,7 @@ footer { border-top: 1px solid var(--rule); padding: 20px 0 44px; color: var(--m
 footer p { margin: 0; max-width: 90ch; }
 
 @media (max-width: 920px) {
+  .chainlist li { grid-template-columns: 1fr; }
   .hero, .rev, .vs, .groupmap { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   .doors, .results { grid-template-columns: 1fr; }
   .door + .door, .results > div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--rule); }
@@ -394,7 +415,7 @@ async function viewHome() {
     <section class="sec"><h2>Where the records drifted most</h2>
       <p class="sub">Areas where listed approvers have been silent for a year, weighted by how much work merged there since ${day(s.since)}.</p>
       <div class="legend"><span>${dots(2, 0)} active approver</span><span>${dots(1, 1)} silent for a year</span></div>
-      <ul class="drifted">${s.worst_dirs.map((d) => `<li><span class="p">${areaLink(d.dir)}</span>${dots(d.approvers, d.silent)}
+      <ul class="drifted">${s.worst_dirs.slice(0, 8).map((d) => `<li><span class="p">${areaLink(d.dir)}</span>${dots(d.approvers, d.silent)}
         <span class="m">${d.silent} of ${d.approvers} listed approvers silent · ${d.prs} PRs merged in the year</span></li>`).join("")}</ul></section>`;
   $("#area-go").onsubmit = (e) => { e.preventDefault(); const q = $("#area-q").value.trim(); if (q) location.hash = "#/area/" + encodeURIComponent(q); };
   try {
@@ -492,7 +513,7 @@ async function viewAreas() {
 // Working group as a small network: this area in the middle, the areas that share its people around it.
 function groupMap(g) {
   if (!g) return "";
-  if (g.outcome !== "answered_with_path") return `<section class="sec"><h2>Works as one team with</h2><p class="sub">${esc(g.note || g.text)}</p></section>`;
+  if (g.outcome !== "answered_with_path") return `<p class="sub">${esc(g.note || g.text)}</p>`;
   const d = g.data, links = d.links.slice(0, 6), W = 560, H = 300, cx = W / 2, cy = H / 2, R = 112;
   const max = Math.max(1, ...links.map((l) => l.shared));
   const short = (p) => { const parts = p.split("/"); const s = parts.slice(-2).join("/"); return s.length > 26 ? "…" + s.slice(-25) : s; };
@@ -506,15 +527,22 @@ function groupMap(g) {
       <text class="gm-label" x="${p.x}" y="${p.y + (p.y < cy ? -14 : 22)}" text-anchor="middle">${esc(short(p.dir))}</text></a>`).join("")}
   </svg>`;
   const others = d.areas.filter((a) => a.dir !== d.dir), own = new Set(d.own_sigs);
-  return `<section class="sec"><h2>Works as one team with</h2>
-    <p class="sub">The areas that share the most people with this one; thicker lines mean more people in common. FalkorDB's label propagation puts it in a working group of ${d.areas.length} areas.${d.sigs.length > 1 ? ` The group carries ${d.sigs.length} different SIG labels: ${d.sigs.map(esc).join(", ")}.` : ""}</p>
+  return `<p class="sub">The areas that share the most people with this one; thicker lines mean more people in common. FalkorDB's label propagation puts it in a working group of ${d.areas.length} areas.${d.sigs.length > 1 ? ` The group carries ${d.sigs.length} different SIG labels: ${d.sigs.map(esc).join(", ")}.` : ""}</p>
     <div class="groupmap">${svg}<div><ul class="people">${links.map((l) => `<li><span class="who">${areaLink(l.dir)}</span><span class="num">${l.shared} in both</span>
       <span class="meta">e.g. ${l.people.map(gh).join(", ")}</span></li>`).join("")}</ul>
       <details class="levels"><summary>All ${d.areas.length} areas in the group</summary><ol>${d.areas.map((a) =>
-        `<li>${areaLink(a.dir)}${a.sigs.length ? ` <span class="tiny">${a.sigs.map(esc).join(", ")}${own.size && a.sigs.some((x) => !own.has(x)) ? " (different SIG)" : ""}</span>` : ""}</li>`).join("")}</ol></details></div></div></section>`;
+        `<li>${areaLink(a.dir)}${a.sigs.length ? ` <span class="tiny">${a.sigs.map(esc).join(", ")}${own.size && a.sigs.some((x) => !own.has(x)) ? " (different SIG)" : ""}</span>` : ""}</li>`).join("")}</ol></details></div></div>`;
 }
 
 // ---- one area ----------------------------------------------------------------------------
+const SHOW = 4, moreRows = {};
+function personRows(list, render, id) {
+  const rows = list.map(render);
+  if (rows.length <= SHOW) return `<ul class="people">${rows.join("")}</ul>`;
+  moreRows[id] = rows.slice(SHOW).join("");
+  return `<ul class="people" id="${id}">${rows.slice(0, SHOW).join("")}</ul>
+    <button type="button" class="quiet more" data-more="${id}">Show all ${rows.length}</button>`;
+}
 async function viewArea(path) {
   const v = $("#view");
   v.innerHTML = `<a class="back" href="#/areas">All areas</a><p class="empty">Loading ${esc(path)}…</p>`;
@@ -530,32 +558,45 @@ async function viewArea(path) {
   const sig = (own.levels.find((l) => l.sigs.length) || { sigs: [] }).sigs;
   const max = Math.max(1, ...k.approvers.map((a) => a.prs_here), ...k.shadow_owners.map((s) => s.prs_here));
   const silentN = k.approvers.filter((a) => a.status === "silent").length;
-  const listed = k.approvers.length ? k.approvers.slice().sort((a, b) => (a.status === "silent") - (b.status === "silent") || b.prs_here - a.prs_here).map((a) => `<li class="${a.status === "silent" ? "silent" : ""}">
+  const approvers = k.approvers.slice().sort((a, b) => (b.status === "silent") - (a.status === "silent") || b.prs_here - a.prs_here);
+  const listed = approvers.length ? personRows(approvers, (a) => `<li class="${a.status === "silent" ? "silent" : ""}">
       <span class="who">${gh(a.handle)}</span><span class="num">${a.prs_here} PRs here</span>
       <div class="bar1"><span style="width:${(100 * a.prs_here / max).toFixed(1)}%"></span></div>
-      <span class="meta">${a.status === "silent" ? `Silent since ${day(k.since)}` : `${a.prs_anywhere} PRs across the repo`}${a.via !== "direct" ? `; listed through <code>${esc(a.via)}</code>` : ""}</span></li>`).join("")
-    : `<li><span class="meta">No approvers listed here; approval comes from the directories above.</span></li>`;
-  const shadow = k.shadow_owners.length ? k.shadow_owners.map((s) => `<li>
+      <span class="meta">${a.status === "silent" ? `Silent since ${day(k.since)}` : `${a.prs_anywhere} PRs across the repo`}${a.via !== "direct" ? `; listed through <code>${esc(a.via)}</code>` : ""}</span></li>`, "more-listed")
+    : `<ul class="people"><li><span class="meta">No approvers listed here; approval comes from the directories above.</span></li></ul>`;
+  const shadow = k.shadow_owners.length ? personRows(k.shadow_owners, (s) => `<li>
       <span class="who">${gh(s.handle)}</span><span class="num">${s.prs_here} PRs here</span>
       <div class="bar1"><span style="width:${(100 * s.prs_here / max).toFixed(1)}%"></span></div>
-      <span class="meta">${s.how.map((h) => HOW[h] || h).join(", ")}; e.g. ${s.example_prs.slice(0, 2).map(pr).join(" ")}${s.listed_below.length ? `; listed lower down, on ${s.listed_below.map((x) => `<code>${esc(x)}</code>`).join(", ")}` : ""}</span></li>`).join("")
-    : `<li><span class="meta">Nobody outside the listed owners worked here since ${day(k.since)}.</span></li>`;
+      <span class="meta">${s.how.map((h) => HOW[h] || h).join(", ")}; e.g. ${s.example_prs.slice(0, 2).map(pr).join(" ")}${s.listed_below.length ? `; listed lower down, on ${s.listed_below.map((x) => `<code>${esc(x)}</code>`).join(", ")}` : ""}</span></li>`, "more-shadow")
+    : `<ul class="people"><li><span class="meta">Nobody outside the listed owners worked here since ${day(k.since)}.</span></li></ul>`;
   const hasFix = draft.outcome === "answered_with_path" && (draft.data.remove.length || draft.data.add_reviewers.length);
+  const tabs = [
+    ["fix", hasFix ? "The drafted fix" : "No fix needed", hasFix
+      ? `<p class="sub">A proposal for a maintainer, with the evidence beside each line. Drift never edits Kubernetes.</p>${ownersFile(draft.data, { foot: `${draft.data.notes.map((n) => `<span>${linkify(n)}</span>`).join("")}<span class="row-actions" style="margin:0"><button type="button" id="dl-one">Download patch</button><button type="button" class="quiet" id="add-q">${state.picked.has(draft.data.dir) ? "In your fix list" : "Add to fix list"}</button></span>` })}`
+      : `<p class="sub">${esc(draft.note || "The listed approvers are active, so there's nothing to change.")}</p>`],
+    ["group", "Working group", groupMap(r.group)],
+    ["chain", "Ownership chain", `<p class="sub">OWNERS files inherit: approval for <code>${esc(k.dir)}</code> can also come from every level above it, up to the root.</p>
+      <ul class="chainlist">${own.levels.map((l) => `<li><code>${esc(l.dir)}</code><span>${l.approvers.length ? l.approvers.map(gh).join(", ") : `<span class="tiny">no approvers listed</span>`}${l.stops_inheritance ? ` <span class="tiny">(inheritance stops here)</span>` : ""}</span></li>`).join("")}</ul>`],
+  ];
   v.innerHTML = `<a class="back" href="#/areas">All areas</a>
     <div class="area-head"><h1><a href="https://github.com/kubernetes/kubernetes/tree/master/${k.dir === "." ? "" : esc(k.dir)}" target="_blank" rel="noopener">${esc(k.dir)}</a></h1>
-      <p>${sig.length ? `Owned by ${sig.map(esc).join(", ")}. ` : ""}${k.approvers.length ? `${dots(k.approvers.length, silentN)} <span class="${silentN ? "record" : "work"}">${silentN} of ${k.approvers.length} listed approvers silent since ${day(k.since)}.</span>` : "No approvers of its own."}</p>
-      ${r.owns.note ? `<p class="tiny">${esc(r.owns.note)}</p>` : ""}
-      <details class="levels"><summary>Approvers at each level up to the root (${own.levels.length} levels)</summary><ol>${own.levels.map((l) =>
-        `<li><code>${esc(l.dir)}</code>: ${l.approvers.length ? l.approvers.map(gh).join(", ") : "none listed"}${l.stops_inheritance ? " (inheritance stops here)" : ""}</li>`).join("")}</ol></details></div>
+      <p>${sig.length ? `Owned by ${sig.map(esc).join(", ")}. ` : ""}${k.approvers.length ? `${dots(k.approvers.length, silentN)} <span class="${silentN ? "record" : "work"}">${silentN} of ${k.approvers.length} listed approvers silent since ${day(k.since)}.</span>` : "No approvers of its own; see the ownership chain."}</p>
+      ${r.owns.note ? `<p class="tiny">${esc(r.owns.note)}</p>` : ""}</div>
     <div class="vs">
-      <div><h2 class="record">What the OWNERS file says</h2><p>Approvers listed for this directory, by PRs they worked on here in the last year.</p><ul class="people">${listed}</ul></div>
-      <div><h2 class="work">Who actually does the work</h2><p>Not listed here or above; ranked by merged PRs they wrote, reviewed or approved here.</p><ul class="people">${shadow}</ul></div>
+      <div><h2 class="record">What the OWNERS file says</h2><p>Listed approvers, by PRs they worked on here in the last year.</p>${listed}</div>
+      <div><h2 class="work">Who actually does the work</h2><p>Not listed here or above; by merged PRs they wrote, reviewed or approved here.</p>${shadow}</div>
     </div>
-    ${hasFix ? `<section class="sec"><h2>The drafted fix</h2><p class="sub">A proposal for a maintainer, with the evidence beside each line. Drift never edits Kubernetes.</p>
-      ${ownersFile(draft.data, { foot: `${draft.data.notes.map((n) => `<span>${linkify(n)}</span>`).join("")}<span class="row-actions" style="margin:0"><button type="button" id="dl-one">Download patch</button><button type="button" class="quiet" id="add-q">${state.picked.has(draft.data.dir) ? "In your fix list" : "Add to fix list"}</button></span>` })}</section>`
-      : `<section class="sec"><h2>The drafted fix</h2><p class="sub">${esc(draft.note || "No change needed here: the listed approvers are active.")}</p></section>`}
-    ${groupMap(r.group)}
+    <div class="tabs2" role="tablist" aria-label="More about this area">${tabs.map(([id, label], i) =>
+      `<button type="button" role="tab" id="tab-${id}" aria-controls="panel-${id}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">${label}</button>`).join("")}</div>
+    ${tabs.map(([id, , html], i) => `<div class="tabpanel" role="tabpanel" id="panel-${id}" aria-labelledby="tab-${id}" ${i === 0 ? "" : "hidden"}>${html}</div>`).join("")}
     ${how({ trace: [...(r.owns.trace || []), ...(r.knows.trace || []), ...(draft.trace || []), ...((r.group && r.group.trace) || [])] })}`;
+  const tabBtns = [...v.querySelectorAll('[role="tab"]')];
+  const select = (btn) => { tabBtns.forEach((b) => { const on = b === btn; b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1; $("#" + b.getAttribute("aria-controls")).hidden = !on; }); };
+  tabBtns.forEach((b, i) => { b.onclick = () => select(b); b.onkeydown = (e) => {
+    const j = e.key === "ArrowRight" ? (i + 1) % tabBtns.length : e.key === "ArrowLeft" ? (i - 1 + tabBtns.length) % tabBtns.length : -1;
+    if (j >= 0) { select(tabBtns[j]); tabBtns[j].focus(); } }; });
+  v.querySelectorAll("[data-more]").forEach((b) => b.onclick = () => {
+    $("#" + b.dataset.more).insertAdjacentHTML("beforeend", moreRows[b.dataset.more]); b.remove(); });
   const dl = $("#dl-one"); if (dl) dl.onclick = () => downloadPatch([draft.data.dir], dl);
   const aq = $("#add-q"); if (aq) aq.onclick = () => { state.picked.add(draft.data.dir); aq.textContent = "In your fix list"; };
 }
@@ -611,41 +652,41 @@ async function viewProof() {
   try { sm = await summary(); } catch (err) { return fail(v, err); }
   const ev = sm.reviewer_eval, bt = sm.backtest, gr = sm.groups;
   const t30 = bt && (bt.shadow_owners.top_k.find((x) => x.k === 30) || bt.shadow_owners.top_k[0]);
+  const grOk = gr && gr.check && gr.check.prs;
+  const fine = [
+    ["What counts as activity", "Merged pull requests in kubernetes/kubernetes that a person wrote, reviewed, or commented <code>/lgtm</code> or <code>/approve</code> on. Reviews on unmerged PRs and work in other repositories aren't counted, so a silent approver may well be busy elsewhere."],
+    ["How the OWNERS baseline is scored", "OWNERS files don't rank people, so their figure is the exact chance that three approvers picked from the nearest OWNERS files include the right one. Today's files are used, which slightly favours them."],
+    ["How the working groups are found", "Two areas are linked when the same people review and write PRs in both; each keeps its four strongest links. The few generalists who review almost everywhere are left out, or everything would merge into one group. FalkorDB's <code>algo.labelPropagation</code> then finds the communities."],
+    ["A bug we found and fixed", "While building the reviewer test, a FalkorDB index bug let later activity leak into the predictions and inflated Drift's score to 86%. The figure above is after the fix, and a test keeps it that way. The bug is still in FalkorDB 4.22; the repository has a script that reproduces it."],
+    ["A claim we dropped", "We also tested whether PRs that cross working groups need more approvers. One download of the data said three times as often, another said no difference, so we don't claim it."],
+    ["What's weak", bt ? `Predicting which silent approvers get removed beats chance by only ${bt.silent_owners.lift}×, because Kubernetes rarely cleans up its OWNERS files. That gap is the problem Drift exists to close.` : ""],
+  ].filter(([, t]) => t);
   v.innerHTML = `<h1 style="font-size:34px;font-weight:750;font-stretch:80%">How we know it works</h1>
-    <p class="lede">Three tests on real Kubernetes history. Each one only lets Drift see data from before the moment it's tested on. Every number here is produced by a script in the repository.</p>
+    <p class="lede">Three tests on real Kubernetes history. In each, Drift only sees data from before the moment it's tested on. Every number is produced by a script in the repository.</p>
     <div class="results">
       ${ev ? `<div><h3>Find a reviewer</h3><div class="big">${pct(ev.approver["drift@3"].rate)}</div><div class="vsn">vs ${pct(ev.approver["owners@3_random"].rate)} from the OWNERS files</div>
-        <p>On ${ev.sampled} PRs merged ${day(ev.test_window[0])} to ${day(ev.test_window[1])}, the person who actually approved was in Drift's top 3.</p></div>` : ""}
+        <p>On ${ev.sampled} PRs merged ${day(ev.test_window[0])} to ${day(ev.test_window[1])}, the person who actually approved was in Drift's top 3.</p>
+        <details><summary>See the numbers</summary><table class="t"><thead><tr><th>Method</th><th class="n">First</th><th class="n">Top 3</th></tr></thead><tbody>
+          <tr><td><b>Drift</b></td><td class="n"><b>${pct(ev.approver["drift@1"].rate)}</b></td><td class="n"><b>${pct(ev.approver["drift@3"].rate)}</b></td></tr>
+          <tr><td>OWNERS files</td><td class="n">${pct(ev.approver["owners@1_random"].rate)}</td><td class="n">${pct(ev.approver["owners@3_random"].rate)}</td></tr>
+          <tr><td>Busiest approvers</td><td class="n">n/a</td><td class="n">${pct(ev.approver["popular@3"].rate)}</td></tr></tbody></table>
+          <p class="tiny">${ev.sampled} PRs sampled from ${ev.prs_in_window_with_an_approver}; author excluded; 95% CI for Drift's top 3: ${Math.round(ev.approver["drift@3"].ci95[0] * 100)}–${Math.round(ev.approver["drift@3"].ci95[1] * 100)}%.</p></details></div>` : ""}
       ${t30 ? `<div><h3>Spotting future owners</h3><div class="big">${t30.lift}×</div><div class="vsn">the base rate</div>
-        <p>The ${t30.k} busiest unlisted reviewers on ${day(bt.snapshot)} became owners within a year at ${t30.lift}× the rate of everyone else.</p></div>` : ""}
-      ${gr && gr.check && gr.check.prs ? `<div><h3>Working groups</h3><div class="big">${pct(gr.check.same_group_share)}</div><div class="vsn">vs ${pct(gr.check.chance_mean)} by chance</div>
-        <p>Of areas changed together in ${gr.check.prs} later PRs, this share fell in the same working group. The best of ${gr.check.shuffles} random shuffles reached ${pct(gr.check.chance_max)}.</p></div>` : ""}
+        <p>The ${t30.k} busiest unlisted reviewers on ${day(bt.snapshot)} became owners within a year at ${t30.lift}× the rate of everyone else.</p>
+        <details><summary>See the numbers</summary><table class="t"><tbody>
+          <tr><td>Approvers silent for the year before</td><td class="n record">${bt.silent_owners.silent_then} of ${bt.silent_owners.approvers_then}</td></tr>
+          <tr><td>Still listed a year later</td><td class="n record">${bt.silent_owners.silent_still_listed_now}</td></tr>
+          <tr><td>Top ${t30.k} reviewers who became owners</td><td class="n work">${t30.who.length}</td></tr></tbody></table>
+          <p class="tiny">They were ${t30.who.map(gh).join(", ")}.</p></details></div>` : ""}
+      ${grOk ? `<div><h3>Working groups</h3><div class="big">${pct(gr.check.same_group_share)}</div><div class="vsn">vs ${pct(gr.check.chance_mean)} by chance</div>
+        <p>Of areas changed together in ${gr.check.prs} later PRs, this share fell in the same working group.</p>
+        <details><summary>See the numbers</summary><table class="t"><tbody>
+          <tr><td>Working groups found</td><td class="n">${gr.count}, over ${gr.dirs_grouped} areas</td></tr>
+          <tr><td>Groups mixing SIG labels</td><td class="n">${gr.cross_sig_groups}</td></tr>
+          <tr><td>Best of ${gr.check.shuffles} random shuffles</td><td class="n">${pct(gr.check.chance_max)}</td></tr></tbody></table>
+          <p class="tiny">Groups built from activity before ${day(gr.check.prs_from)}; tested on later PRs touching two to five grouped areas.</p></details></div>` : ""}
     </div>
-    ${ev ? `<section class="sec"><h2>1. Does Find a reviewer pick the right people?</h2>
-      <p class="sub">${ev.sampled} PRs sampled from the ${ev.prs_in_window_with_an_approver} merged in the window. For each, Drift only saw activity from before that PR, with the PR's author excluded.</p>
-      <table class="t"><thead><tr><th>Method</th><th class="n">Right person first</th><th class="n">Right person in top 3</th></tr></thead><tbody>
-        <tr><td><b>Drift</b></td><td class="n"><b>${pct(ev.approver["drift@1"].rate)}</b></td><td class="n"><b>${pct(ev.approver["drift@3"].rate)}</b> <span class="tiny">(95% CI ${Math.round(ev.approver["drift@3"].ci95[0] * 100)}–${Math.round(ev.approver["drift@3"].ci95[1] * 100)}%)</span></td></tr>
-        <tr><td>Pick from the OWNERS files</td><td class="n">${pct(ev.approver["owners@1_random"].rate)}</td><td class="n">${pct(ev.approver["owners@3_random"].rate)}</td></tr>
-        <tr><td>Ask the busiest approvers</td><td class="n">n/a</td><td class="n">${pct(ev.approver["popular@3"].rate)}</td></tr></tbody></table></section>` : ""}
-    ${bt ? `<section class="sec"><h2>2. Does drift show up a year early?</h2>
-      <p class="sub">Drift ran on the organisation as it stood on ${day(bt.snapshot)}, using only the year before, and was checked against today's OWNERS files.</p>
-      <table class="t"><tbody>
-        <tr><td>Approvers silent for the year before ${day(bt.snapshot)}</td><td class="n record">${bt.silent_owners.silent_then} of ${bt.silent_owners.approvers_then}</td></tr>
-        <tr><td>Of those, still listed a year later</td><td class="n record">${bt.silent_owners.silent_still_listed_now}</td></tr>
-        <tr><td>Predicting which silent approvers get removed</td><td class="n">${bt.silent_owners.lift}× chance <span class="tiny">(weak: records are rarely cleaned up)</span></td></tr>
-        <tr><td>The ${t30.k} busiest unlisted reviewers who became owners</td><td class="n work">${t30.who.length}, at ${t30.lift}× the base rate</td></tr></tbody></table>
-      <p class="tiny">They were ${t30.who.map(gh).join(", ")}.</p></section>` : ""}
-    ${gr && gr.check && gr.check.prs ? `<section class="sec"><h2>3. Are the working groups real?</h2>
-      <p class="sub">Label propagation found ${gr.count} working groups over ${gr.dirs_grouped} areas; ${gr.cross_sig_groups} of them mix areas labelled with different SIGs. The groups were rebuilt from activity before ${day(gr.check.prs_from)}, then tested on the ${gr.check.prs} later PRs that touched two to five of these areas.</p>
-      <table class="t"><thead><tr><th>Areas changed in the same PR</th><th class="n">In the same group</th></tr></thead><tbody>
-        <tr><td><b>Drift's working groups</b></td><td class="n"><b>${pct(gr.check.same_group_share)}</b></td></tr>
-        <tr><td>By chance, ${gr.check.shuffles} shuffles <span class="tiny">(highest ${pct(gr.check.chance_max)})</span></td><td class="n">${pct(gr.check.chance_mean)}</td></tr></tbody></table></section>` : ""}
-    <section class="sec method"><h2>The fine print</h2>
-      <h3>What counts as activity</h3><p>Merged pull requests in kubernetes/kubernetes that a person wrote, reviewed, or commented <code>/lgtm</code> or <code>/approve</code> on. Reviews on unmerged PRs and work in other repositories aren't counted, so a silent approver may well be busy elsewhere.</p>
-      <h3>How the OWNERS baseline is scored</h3><p>OWNERS files don't rank people, so their figure is the exact chance that three approvers picked from the nearest OWNERS files include the right one. Today's files are used, which slightly favours them.</p>
-      <h3>A bug we found and fixed</h3><p>While building the reviewer test, a FalkorDB index bug let later activity leak into the predictions and inflated Drift's score to 86%. The figure above is after the fix, and a test keeps it that way. The bug is still in FalkorDB 4.22; the repository has a script that reproduces it.</p>
-      <h3>A claim we dropped</h3><p>We also tested whether PRs that cross working groups need more approvers. One download of the data said three times as often, another said no difference, so we don't claim it.</p>
-      <h3>How the working groups are found</h3><p>Two areas are linked when the same people review and write PRs in both; each keeps its four strongest links. The few generalists who review almost everywhere are left out, or everything would merge into one group. FalkorDB's <code>algo.labelPropagation</code> then finds the communities.</p></section>`;
+    <section class="fine"><h2>The fine print</h2>${fine.map(([h, t]) => `<details><summary>${h}</summary><p>${t}</p></details>`).join("")}</section>`;
 }
 
 // ---- ask drawer --------------------------------------------------------------------------
