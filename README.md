@@ -329,6 +329,10 @@ stores `day` as an integer (`20260910`), and all date filters use it.
 - The what-if counts an approver as active if they did any review, `/lgtm`, `/approve` or merged PR in kubernetes/kubernetes in the last year; it does not model alias membership changes.
 - 50 tests (`pytest`); the ones that need the built graph skip in CI, where only the OWNERS data is loaded.
 
+## Explaining the project
+
+[`docs/EXPLAIN-IT.md`](docs/EXPLAIN-IT.md) walks through the data, the graph model, every key query, the evaluation and the decisions, with the questions a judge is likely to ask.
+
 ## Use of AI coding assistants
 
 This project was built with help from Claude (Anthropic) as a coding assistant, as permitted by

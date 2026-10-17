@@ -152,6 +152,12 @@ def index():
     return FileResponse(os.path.join(ROOT, "web", "index.html"))
 
 
+@app.get("/model.svg")
+def model_svg():
+    """The graph data-model diagram (also shown at the top of the README)."""
+    return FileResponse(os.path.join(ROOT, "docs", "model.svg"), media_type="image/svg+xml")
+
+
 @app.get("/api/health")
 def health():
     try:
