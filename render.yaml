@@ -4,6 +4,7 @@ services:
     name: drift
     runtime: python
     plan: free
+    region: singapore   # closest Render region to the FalkorDB Cloud instance in Mumbai (ap-south-1)
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn orggraph.api:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health

@@ -16,6 +16,8 @@ It runs on a real organisation: **Kubernetes**, with 24 teams (SIGs), ~800 peopl
 directories, ~680 decision records (KEPs) and 6,700+ merged pull requests with their reviews and
 approvals, all public.
 
+**Live:** https://drift-vqj4.onrender.com (free hosting: the first visit after a quiet spell takes about a minute to wake up)
+
 Tracks: **Company Brain** (primary), **Agents That Act on Connected Data**.
 
 > Status: work in progress during Graph Hacks (Oct 15–18, 2026).
@@ -27,7 +29,7 @@ reviewers using **only activity from before that PR**, and we checked against wh
 
 | Method | Right person first | Right person in top 3 |
 |---|---|---|
-| **Drift** (Find a reviewer) | **52%** | **78%** (95% CI 74–82%) |
+| **Drift** (Find a reviewer) | **53%** | **78%** (95% CI 74–82%) |
 | Pick from the OWNERS files (what the records say) | 13% | 37% |
 | Ask the busiest approvers | n/a | 46% |
 
