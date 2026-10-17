@@ -24,6 +24,16 @@ approvals, all public.
 
 Tracks: **Company Brain** (primary), **Agents That Act on Connected Data**.
 
+| The brief asks the graph to… | In Drift |
+|---|---|
+| Follow connections across data | Person → PR → directory → parent directories (`[:INSIDE*0..10]`) for every answer |
+| Connect people, projects and decisions | People, directories, teams (SIGs) and ~680 decision records (KEPs) in one graph; *Why was KEP 2340 decided?* |
+| Show the path behind an answer | Every answer carries its path (*reviewed PR #… which changed …*), an evidence graph, and the timed queries behind it |
+| Remember across sessions | Answers are stored as `(:Finding)` nodes linked to what and whom they cite; ask again and Drift says what changed |
+| Share state between agents | The web app, the terminal agent and any MCP client (Claude Desktop, Cursor) read the same memory in the graph |
+| Act on what the graph shows | Drafts OWNERS fixes as a real patch, checks them on a `GRAPH.COPY` of the graph first, and answers "what if this person stepped back?" |
+| Say when it doesn't know | Names are resolved first: *who owns pkg/kublet?* gets "not in the graph, did you mean pkg/kubelet?" and no query runs |
+
 <p align="center"><img src="docs/model.svg" alt="Drift's graph: people, pull requests, directories, SIGs, KEPs and the agent's memory, with the records in plum and the work in teal" width="860"></p>
 
 ## Does it work? Measured on 400 real PRs
@@ -56,6 +66,8 @@ Numbers below are produced by `python -m orggraph.backtest` and stored in
 - **The records did not notice.** A year later, 44 of those 49 were still listed as approvers.
 - **The people doing the work show up early.** Ranking non-owners by review activity on
   2025-10-16, the top 30 became reviewers or approvers within a year at **5.3× the base rate**.
+### Supporting findings
+
 - **The real teams don't follow the SIG labels.** Label propagation on who-works-where finds 19
   working groups over 206 areas; 13 of them mix areas labelled with different SIGs (the scheduler's
   group spans areas labelled Scheduling, Node and Instrumentation). The groups predict the future:
@@ -118,7 +130,7 @@ router and templates do, so everything works offline.
 | **Find a reviewer** | Contributors, every PR | Paste the files a change touches (or a merged PR number): who to ask first and why, as a path through the graph, the next best people, and which listed owners have gone quiet. |
 | **Areas** | Anyone new to a part of the code | Every OWNERS directory, searchable. Each opens *what the OWNERS file says* next to *who actually does the work*, the drafted fix, and a map of the areas that share its people (its working group). |
 | **Fix the records** | Maintainers, monthly | Drafted OWNERS fixes for the most drifted directories. Tick the ones you agree with and download one patch: `git apply drift-owners.patch`. Edits keep comments and formatting, are re-parsed and checked before export, and files using `filters:` are left for humans. |
-| **How we know** | Skeptics | The three tests (reviewer accuracy, the year-later backtest, the working-group check), their method and the claims we dropped. |
+| **How we know** | Skeptics | The two results that matter (reviewer accuracy, and the drafted fixes checked on a copy of the graph), then the supporting checks, their method and the claims we dropped. |
 
 Ask anything from the top bar; answers open beside the page with their graph path, and the queries behind them under *How this was answered*.
 The data refreshes by re-running `fetch_reviews` and `build.py` (both incremental-friendly), e.g. weekly.
