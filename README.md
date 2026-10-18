@@ -25,6 +25,8 @@ approvals, all public.
 
 **Live:** https://drift-egny.onrender.com (free hosting: the first visit after a quiet spell takes about a minute to wake up)
 
+**Demo video:** https://youtu.be/eCKpFnyWU8k
+
 Tracks: **Company Brain** (primary), **Agents That Act on Connected Data**.
 
 | The brief asks the graph to… | In Drift |
